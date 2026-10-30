@@ -1,0 +1,20 @@
+import { useState } from 'react';
+import { Button, Field, P, Screen } from '@/components/ui';
+import { api } from '@/lib/api';
+
+export default function Forgot() {
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  return (
+    <Screen title="Reset your password" back>
+      {sent ? (
+        <P>If an account exists for {email}, we sent a link to reset your password. It expires in 1 hour.</P>
+      ) : (
+        <>
+          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+          <Button title="Send reset link" onPress={async () => { await api('/auth/forgot', { body: { email } }).catch(() => {}); setSent(true); }} />
+        </>
+      )}
+    </Screen>
+  );
+}

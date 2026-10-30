@@ -1,56 +1,30 @@
-# Welcome to your Expo app 👋
+# Fortune Muse — frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+One Expo app for **web, Android and iOS** (Expo SDK 58, Expo Router, TypeScript).
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/app/            screens (file = route)
+  welcome, register, login, forgot, reset, verify, magic   M1
+  home              spirit picker, memory greeting, topic, daily draw, rooms
+  ask               question, tier, voucher, consent, payment
+  reading/[id]      M4 result card, feedback (M5), room + draw entry
+  draw              M6 daily card + odds
+  room/[id]         M7 chat, members, report / block / leave
+  settings, memories, avatar, history, export, legal/[doc]   M2/M5/M8/M9
+src/components/     Avatar (animated SVG), DeityArt, SafetyCard, ui kit
+src/lib/            api client, session, config, theme, legal copy
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+## Run
 
-### Other setup steps
+```
+copy .env.example .env     # set EXPO_PUBLIC_API_URL
+npm install
+npm run web                # browser
+npm run android            # Android emulator (API at http://10.0.2.2:4000)
+npm run ios                # iOS simulator (macOS only)
+npm run typecheck
+npm run build:web          # static site in dist/ (single-page app)
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+On a real phone, set `EXPO_PUBLIC_API_URL` to your computer's LAN IP. Native builds and store submission: `npx eas-cli@latest build -p ios|android` (bundle id / package `app.fortunemuse`). See the root README for the in-app purchase decision before submitting to the stores.
