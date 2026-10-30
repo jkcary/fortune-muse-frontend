@@ -1,4 +1,5 @@
 import { API_URL, deviceTimeZone } from './config';
+import { formatMoney, type Lang } from './i18n';
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -42,7 +43,7 @@ export interface AvatarData { baseId: string; customization: { palette: string; 
 
 export interface Me {
   id: string; email: string; email_verified: boolean; handle: string; role: 'user' | 'admin';
-  country: string; timezone: string; gender: string | null; age_range: string | null;
+  country: string; timezone: string; language: Lang; gender: string | null; age_range: string | null;
   memory_enabled: boolean; rooms_enabled: boolean; avatar: AvatarData;
   /** Verified super account: readings are free. */
   super: boolean;
@@ -71,4 +72,4 @@ export interface Reading {
 
 export interface SafetyResponse { kind: string; message: string; resources: { name: string; detail: string; url: string }[] }
 
-export const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+export const money = formatMoney;

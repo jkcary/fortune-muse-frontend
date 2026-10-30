@@ -3,15 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { P } from '@/components/ui';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { startOAuth, type OAuthProvider } from '@/lib/oauth';
 import { colors, space } from '@/lib/theme';
-
-// Wording and colors follow each provider's sign-in button guidelines.
-const LABEL: Record<OAuthProvider, string> = {
-  google: 'Continue with Google',
-  microsoft: 'Continue with Microsoft',
-  apple: 'Continue with Apple',
-};
 
 function Logo({ provider }: { provider: OAuthProvider }) {
   if (provider === 'google') {
@@ -41,8 +35,11 @@ function Logo({ provider }: { provider: OAuthProvider }) {
   );
 }
 
+// Labels follow each provider's sign-in button guidelines, using their official translations (strings.ts KEYED).
+
 /** Google / Microsoft / Apple buttons for the providers the API has enabled, plus the "or" divider. Renders nothing if none are. */
 export function OAuthButtons() {
+  const t = useT();
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
   useEffect(() => {
     api<{ providers: { id: OAuthProvider }[] }>('/auth/oauth/providers')
@@ -54,16 +51,16 @@ export function OAuthButtons() {
   return (
     <View>
       {providers.map((p) => (
-        <Pressable key={p} accessibilityRole="button" accessibilityLabel={LABEL[p]} onPress={() => startOAuth(p)}
+        <Pressable key={p} accessibilityRole="button" accessibilityLabel={t(p)} onPress={() => startOAuth(p)}
           style={({ pressed }) => [s.btn, p === 'apple' ? s.apple : s.light, pressed && { opacity: 0.8 }]}>
           <View style={s.logo}><Logo provider={p} /></View>
-          <Text style={[s.text, p === 'apple' && { color: '#fff' }]}>{LABEL[p]}</Text>
+          <Text style={[s.text, p === 'apple' && { color: '#fff' }]}>{t(p)}</Text>
         </Pressable>
       ))}
-      <P muted style={{ textAlign: 'center', fontSize: 13, marginBottom: space(1) }}>Works with Gmail, Outlook, Hotmail and iCloud addresses.</P>
+      <P muted style={{ textAlign: 'center', fontSize: 13, marginBottom: space(1) }}>{t('Works with Gmail, Outlook, Hotmail and iCloud addresses.')}</P>
       <View style={s.or}>
         <View style={s.line} />
-        <P muted style={{ fontSize: 13 }}>or</P>
+        <P muted style={{ fontSize: 13 }}>{t('or')}</P>
         <View style={s.line} />
       </View>
     </View>

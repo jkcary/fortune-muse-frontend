@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, H2, Loading, P, Screen } from '@/components/ui';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { colors, space } from '@/lib/theme';
 import { useAuthed } from '@/lib/useAuthed';
@@ -13,6 +14,7 @@ const ICON: Record<string, string> = { free_reading: '🎟️', avatar_item: '�
 export default function Draw() {
   const me = useAuthed();
   const { refresh } = useSession();
+  const t = useT();
   const [state, setState] = useState<{ drawn: boolean; reward: Reward | null; odds: Reward[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const flip = useRef(new Animated.Value(0)).current;
@@ -35,28 +37,28 @@ export default function Draw() {
 
   const scaleX = flip.interpolate({ inputRange: [0, 1], outputRange: [1, 0.05] });
   return (
-    <Screen back title="🎴 Daily free draw">
-      <P muted>One free card a day, reset at midnight your time. Rewards are virtual and never need a purchase.</P>
+    <Screen back title={t('🎴 Daily free draw')}>
+      <P muted>{t('One free card a day, reset at midnight your time. Rewards are virtual and never need a purchase.')}</P>
       <Animated.View style={[s.card, { transform: [{ scaleX }] }]}>
         {state.reward ? (
           <>
             <Text style={{ fontSize: 56 }}>{ICON[state.reward.type] ?? '🎁'}</Text>
-            <Text style={s.name}>{state.reward.name}</Text>
-            <P style={{ textAlign: 'center', color: '#FFF3D6' }}>{state.reward.description}</P>
+            <Text style={s.name}>{t(state.reward.name)}</Text>
+            <P style={{ textAlign: 'center', color: '#FFF3D6' }}>{t(state.reward.description)}</P>
           </>
         ) : (
           <Text style={{ fontSize: 64 }}>🧧</Text>
         )}
       </Animated.View>
       {state.drawn
-        ? <P style={{ textAlign: 'center', marginBottom: space(4) }}>Come back tomorrow for another card!</P>
-        : <Button title="Draw my card" onPress={draw} loading={busy} />}
+        ? <P style={{ textAlign: 'center', marginBottom: space(4) }}>{t('Come back tomorrow for another card!')}</P>
+        : <Button title={t('Draw my card')} onPress={draw} loading={busy} />}
 
       <Card>
-        <H2>Odds</H2>
+        <H2>{t('Odds')}</H2>
         {state.odds.map((o) => (
           <View key={o.id} style={s.odd}>
-            <P style={{ flex: 1 }}>{ICON[o.type]} {o.name}</P>
+            <P style={{ flex: 1 }}>{ICON[o.type]} {t(o.name)}</P>
             <P style={{ fontWeight: '700' }}>{o.probability}%</P>
           </View>
         ))}

@@ -4,6 +4,7 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, 
 import { Avatar } from '@/components/Avatar';
 import { Button, Card, ErrorText, H2, Loading, P, Screen } from '@/components/ui';
 import { api, wsUrl, type AvatarData } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { colors, radius, space } from '@/lib/theme';
 import { useAuthed } from '@/lib/useAuthed';
 
@@ -13,6 +14,7 @@ const REASONS = [['harassment', 'Harassment'], ['hate', 'Hate'], ['sexual', 'Sex
 
 export default function Room() {
   const me = useAuthed();
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [room, setRoom] = useState<{ label: string; expiresAt: string } | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -53,29 +55,29 @@ export default function Room() {
 
   const hoursLeft = room ? Math.max(0, Math.round((Date.parse(room.expiresAt) - Date.now()) / 3_600_000)) : 0;
 
-  if (closed) return <Screen back title="Room closed"><P>{err ?? 'This room has closed. Rooms disappear 24 hours after they open.'}</P></Screen>;
+  if (closed) return <Screen back title={t('Room closed')}><P>{err ?? t('This room has closed. Rooms disappear 24 hours after they open.')}</P></Screen>;
 
   return (
     <Screen back scroll={false}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Text style={s.title}>{room?.label ?? '…'}</Text>
-        <P muted style={{ fontSize: 12 }}>People who asked a similar question today · closes in about {hoursLeft}h and all messages are deleted</P>
+        <Text style={s.title}>{room ? t(room.label) : '…'}</Text>
+        <P muted style={{ fontSize: 12 }}>{t('People who asked a similar question today · closes in about {h}h and all messages are deleted', { h: hoursLeft })}</P>
         <FlatList horizontal data={members} keyExtractor={(m) => m.id} style={{ flexGrow: 0, marginVertical: space(2) }}
           renderItem={({ item }) => (
             <View style={{ alignItems: 'center', marginRight: space(3), width: 64 }}>
               <Avatar avatar={item.avatar} size={44} />
-              <Text numberOfLines={1} style={{ fontSize: 10, color: colors.muted }}>{item.id === me.id ? 'You' : item.handle}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10, color: colors.muted }}>{item.id === me.id ? t('You') : item.handle}</Text>
             </View>
           )} />
         <FlatList ref={list} data={messages} keyExtractor={(m) => m.id} style={{ flex: 1 }}
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
-          ListEmptyComponent={<P muted style={{ textAlign: 'center', marginTop: space(8) }}>Say hi and share a little luck 🍀</P>}
+          ListEmptyComponent={<P muted style={{ textAlign: 'center', marginTop: space(8) }}>{t('Say hi and share a little luck 🍀')}</P>}
           renderItem={({ item }) => {
             const mine = item.user_id === me.id;
             return (
-              <Pressable onLongPress={() => !mine && setTarget(item)} accessibilityHint={mine ? undefined : 'Long press to report or block'}
+              <Pressable onLongPress={() => !mine && setTarget(item)} accessibilityHint={mine ? undefined : t('Long press to report or block')}
                 style={[s.bubble, mine ? s.mine : s.theirs]}>
-                {!mine && <Text style={s.who}>{item.handle ?? 'Someone'}</Text>}
+                {!mine && <Text style={s.who}>{item.handle ?? t('Someone')}</Text>}
                 <Text style={{ color: mine ? '#fff' : colors.ink, fontSize: 15 }}>{item.text}</Text>
                 {!mine && <Pressable onPress={() => setTarget(item)} hitSlop={8}><Text style={s.more}>•••</Text></Pressable>}
               </Pressable>
@@ -84,29 +86,29 @@ export default function Room() {
         {target && (
           <Card style={{ borderColor: colors.red }}>
             <H2>{target.handle}</H2>
-            <P muted style={{ marginBottom: space(2) }}>Report this message or block this person. Blocked people can’t see you and you won’t see them.</P>
+            <P muted style={{ marginBottom: space(2) }}>{t('Report this message or block this person. Blocked people can’t see you and you won’t see them.')}</P>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginBottom: space(2) }}>
               {REASONS.map(([k, label]) => (
                 <Pressable key={k} style={s.reason} onPress={async () => {
                   await api('/reports', { body: { messageId: target.id, reason: k } }).catch((e) => setErr(e.message));
-                  setTarget(null); setErr('Thanks — our team will review this.');
-                }}><Text>{label}</Text></Pressable>
+                  setTarget(null); setErr(t('Thanks — our team will review this.'));
+                }}><Text>{t(label)}</Text></Pressable>
               ))}
             </View>
-            <Button kind="danger" title={`Block ${target.handle}`} onPress={async () => {
+            <Button kind="danger" title={t('Block {name}', { name: target.handle ?? '' })} onPress={async () => {
               if (target.user_id) await api('/blocks', { body: { userId: target.user_id } });
               setTarget(null); load();
             }} />
-            <Button kind="ghost" title="Cancel" onPress={() => setTarget(null)} />
+            <Button kind="ghost" title={t('Cancel')} onPress={() => setTarget(null)} />
           </Card>
         )}
         <ErrorText>{err}</ErrorText>
         <View style={s.composer}>
-          <TextInput value={text} onChangeText={setText} placeholder="Message (no links or contact info)" placeholderTextColor="#B0A390"
-            style={s.input} maxLength={500} onSubmitEditing={send} returnKeyType="send" accessibilityLabel="Message" />
-          <Pressable onPress={send} style={s.send} accessibilityRole="button" accessibilityLabel="Send"><Text style={{ color: '#fff', fontWeight: '700' }}>Send</Text></Pressable>
+          <TextInput value={text} onChangeText={setText} placeholder={t('Message (no links or contact info)')} placeholderTextColor="#B0A390"
+            style={s.input} maxLength={500} onSubmitEditing={send} returnKeyType="send" accessibilityLabel={t('Message')} />
+          <Pressable onPress={send} style={s.send} accessibilityRole="button" accessibilityLabel={t('Send')}><Text style={{ color: '#fff', fontWeight: '700' }}>{t('Send')}</Text></Pressable>
         </View>
-        <Button kind="ghost" title="Leave room" onPress={async () => { await api(`/rooms/${id}/leave`, { body: {} }); router.replace('/home'); }} />
+        <Button kind="ghost" title={t('Leave room')} onPress={async () => { await api(`/rooms/${id}/leave`, { body: {} }); router.replace('/home'); }} />
       </KeyboardAvoidingView>
     </Screen>
   );

@@ -21,3 +21,20 @@ export const tokenStore = {
     else await SecureStore.deleteItemAsync('fm_token');
   },
 };
+
+/** The app language picked on this device (not secret, so plain storage on web). */
+export const langStore = {
+  async get(): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      try { return globalThis.localStorage?.getItem('fm_lang') ?? null; } catch { return null; }
+    }
+    return SecureStore.getItemAsync('fm_lang');
+  },
+  async set(lang: string) {
+    if (Platform.OS === 'web') {
+      try { globalThis.localStorage?.setItem('fm_lang', lang); } catch {}
+      return;
+    }
+    await SecureStore.setItemAsync('fm_lang', lang);
+  },
+};

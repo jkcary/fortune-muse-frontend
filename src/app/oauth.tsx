@@ -1,11 +1,11 @@
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
+import { TermsCheck } from '@/components/TermsCheck';
 import { Button, Check, ErrorText, Loading, P, Screen } from '@/components/ui';
 import { api } from '@/lib/api';
 import { deviceTimeZone } from '@/lib/config';
+import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
-import { colors } from '@/lib/theme';
 
 type Exchange = { token: string } | { needsSignup: true; email: string; provider: string };
 
@@ -15,9 +15,10 @@ const PROVIDER_NAME: Record<string, string> = { google: 'Google', microsoft: 'Mi
 export default function OAuthReturn() {
   const { ticket, error } = useLocalSearchParams<{ ticket?: string; error?: string }>();
   const { signIn } = useSession();
+  const { t, lang } = useI18n();
   const [signup, setSignup] = useState<{ email: string; provider: string } | null>(null);
   const [err, setErr] = useState<string | null>(
-    error === 'cancelled' ? 'Sign-in was cancelled.' : error ? 'We couldn’t sign you in with that account. Please try again.' : null,
+    error === 'cancelled' ? t('Sign-in was cancelled.') : error ? t('We couldn’t sign you in with that account. Please try again.') : null,
   );
   const [adult, setAdult] = useState(false);
   const [terms, setTerms] = useState(false);
@@ -35,7 +36,7 @@ export default function OAuthReturn() {
 
   useEffect(() => {
     if (error || !ticket) {
-      if (!error) setErr('This sign-in link is incomplete. Please try again.');
+      if (!error) setErr(t('This sign-in link is incomplete. Please try again.'));
       return;
     }
     if (started.current) return;
@@ -46,12 +47,12 @@ export default function OAuthReturn() {
 
   async function createAccount() {
     setErr(null);
-    if (!adult) return setErr('You must be 18 or older to use Fortune Muse.');
-    if (!terms) return setErr('Please accept the Terms and Privacy Policy.');
+    if (!adult) return setErr(t('You must be 18 or older to use Fortune Muse.'));
+    if (!terms) return setErr(t('Please accept the Terms and Privacy Policy.'));
     setBusy(true);
     try {
       await finish(await api<Exchange>('/auth/oauth/exchange', {
-        body: { ticket, ageConfirmed: true, acceptTerms: true, timezone: deviceTimeZone(), country: 'US' },
+        body: { ticket, ageConfirmed: true, acceptTerms: true, timezone: deviceTimeZone(), country: 'US', language: lang },
       }));
     } catch (e: any) {
       setErr(e.message);
@@ -62,25 +63,22 @@ export default function OAuthReturn() {
 
   if (signup) {
     return (
-      <Screen title="Almost there">
+      <Screen title={t('Almost there')}>
         <P muted style={{ marginBottom: 16 }}>
-          You’re signing up with {PROVIDER_NAME[signup.provider] ?? signup.provider} as {signup.email}. We’ll give you a lucky name and a little avatar.
+          {t('You’re signing up with {provider} as {email}. We’ll give you a lucky name and a little avatar.', { provider: PROVIDER_NAME[signup.provider] ?? signup.provider, email: signup.email })}
         </P>
-        <Check checked={adult} onChange={setAdult}>I am 18 years of age or older.</Check>
-        <Check checked={terms} onChange={setTerms}>
-          I agree to the <Link href="/legal/terms"><Text style={{ color: colors.goldDeep }}>Terms of Use</Text></Link> and{' '}
-          <Link href="/legal/privacy"><Text style={{ color: colors.goldDeep }}>Privacy Policy</Text></Link>.
-        </Check>
+        <Check checked={adult} onChange={setAdult}>{t('I am 18 years of age or older.')}</Check>
+        <TermsCheck checked={terms} onChange={setTerms} />
         <ErrorText>{err}</ErrorText>
-        <Button title="Create account" onPress={createAccount} loading={busy} />
-        <Button title="Cancel" kind="ghost" onPress={() => router.replace('/welcome')} />
+        <Button title={t('Create account')} onPress={createAccount} loading={busy} />
+        <Button title={t('Cancel')} kind="ghost" onPress={() => router.replace('/welcome')} />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Signing you in">
-      {err ? <><P style={{ marginBottom: 16 }}>{err}</P><Button title="Back" onPress={() => router.replace('/welcome')} /></> : <Loading />}
+    <Screen title={t('Signing you in')}>
+      {err ? <><P style={{ marginBottom: 16 }}>{err}</P><Button title={t('Back')} onPress={() => router.replace('/welcome')} /></> : <Loading />}
     </Screen>
   );
 }

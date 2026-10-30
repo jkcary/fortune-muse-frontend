@@ -3,9 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { DeityArt } from '@/components/DeityArt';
 import { OAuthButtons } from '@/components/OAuthButtons';
 import { Button, EntertainmentNote, H1, P, Screen } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import { space } from '@/lib/theme';
 
 export default function Welcome() {
+  const t = useT();
   return (
     <Screen>
       <View style={s.hero}>
@@ -14,15 +16,15 @@ export default function Welcome() {
           <DeityArt theme="ingot" size={110} />
           <DeityArt theme="greenback" size={84} />
         </View>
-        <H1 style={{ textAlign: 'center' }}>Fortune Muse</H1>
+        <H1 style={{ textAlign: 'center' }}>{t('Fortune Muse')}</H1>
         <P muted style={{ textAlign: 'center', marginBottom: space(6) }}>
-          Draw a fortune with a friendly money spirit, get a lucky plan you can use today, and chat with people who asked the same question.
+          {t('Draw a fortune with a friendly money spirit, get a lucky plan you can use today, and chat with people who asked the same question.')}
         </P>
         <OAuthButtons />
-        <Button title="Sign up with another email" kind="secondary" onPress={() => router.push('/register')} />
-        <Button title="I already have an account" kind="ghost" onPress={() => router.push('/login')} />
+        <Button title={t('Sign up with another email')} kind="secondary" onPress={() => router.push('/register')} />
+        <Button title={t('I already have an account')} kind="ghost" onPress={() => router.push('/login')} />
         <EntertainmentNote />
-        <P muted style={{ textAlign: 'center', fontSize: 13 }}>For adults 18+ in the United States.</P>
+        <P muted style={{ textAlign: 'center', fontSize: 13 }}>{t('For adults 18+ in the United States.')}</P>
       </View>
     </Screen>
   );
