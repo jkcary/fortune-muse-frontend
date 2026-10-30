@@ -44,6 +44,8 @@ export interface Me {
   id: string; email: string; email_verified: boolean; handle: string; role: 'user' | 'admin';
   country: string; timezone: string; gender: string | null; age_range: string | null;
   memory_enabled: boolean; rooms_enabled: boolean; avatar: AvatarData;
+  /** Verified super account: readings are free. */
+  super: boolean;
   inventory: { id: string; type: string; name: string; asset: string; available: number }[];
   freeReadings: number;
 }

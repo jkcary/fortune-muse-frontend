@@ -38,10 +38,10 @@ export default function History() {
         <Card key={o.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <P>{new Date(o.created_at).toLocaleDateString()} · {o.tier ?? 'reading'}</P>
-            <Text style={{ fontWeight: '700' }}>{o.provider === 'voucher' ? 'Voucher' : money(o.amount + o.tax)}</Text>
+            <Text style={{ fontWeight: '700' }}>{o.provider === 'voucher' ? 'Voucher' : o.provider === 'comp' ? 'Free' : money(o.amount + o.tax)}</Text>
           </View>
           <P muted style={{ fontSize: 12 }}>Status: {o.status.replace('_', ' ')}{o.tax ? ` · includes ${money(o.tax)} tax` : ''}</P>
-          {o.status === 'paid' && o.provider !== 'voucher' && refundFor !== o.id && (
+          {o.status === 'paid' && o.provider !== 'voucher' && o.provider !== 'comp' && refundFor !== o.id && (
             <Pressable onPress={() => setRefundFor(o.id)}><Text style={{ color: colors.goldDeep, marginTop: space(2) }}>Request a refund</Text></Pressable>
           )}
           {refundFor === o.id && (

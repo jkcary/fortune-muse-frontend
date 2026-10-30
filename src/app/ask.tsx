@@ -28,7 +28,7 @@ export default function Ask() {
   useEffect(() => { api('/deities').then(setCatalog).catch((e) => setErr(e.message)); }, []);
   if (!me || !catalog) return <Screen back><Loading /></Screen>;
   const deity = catalog.deities.find((d) => d.id === params.deityId) ?? catalog.deities[0];
-  const voucher = useVoucher && me.freeReadings > 0;
+  const voucher = !me.super && useVoucher && me.freeReadings > 0;
 
   async function submit() {
     setErr(null);
@@ -85,7 +85,8 @@ export default function Ask() {
       </View>
 
       <H2 style={{ marginTop: space(3) }}>Choose your reading</H2>
-      {me.freeReadings > 0 && (
+      {me.super && <P muted style={{ fontSize: 13, marginBottom: space(2) }}>Super account: every reading is free.</P>}
+      {!me.super && me.freeReadings > 0 && (
         <Check checked={useVoucher} onChange={setUseVoucher}>Use a free reading voucher (Standard reading)</Check>
       )}
       {!voucher && (Object.keys(catalog.prices) as Tier[]).map((t) => (
@@ -95,16 +96,16 @@ export default function Ask() {
             <Text style={s.tierName}>{catalog.prices[t].label}</Text>
             <P muted style={{ fontSize: 13 }}>{catalog.prices[t].description}</P>
           </View>
-          <Text style={s.price}>{money(catalog.prices[t].amount)}</Text>
+          <Text style={s.price}>{me.super ? 'Free' : money(catalog.prices[t].amount)}</Text>
         </Pressable>
       ))}
-      {!voucher && <P muted style={{ fontSize: 12, marginBottom: space(3) }}>Prices in USD. Sales tax is added at checkout where it applies.</P>}
+      {!voucher && !me.super && <P muted style={{ fontSize: 12, marginBottom: space(3) }}>Prices in USD. Sales tax is added at checkout where it applies.</P>}
 
       <Check checked={consent} onChange={setConsent}>
         I understand this reading is digital content for entertainment, delivered right after payment. If it fails to generate I’m refunded automatically.
       </Check>
       <ErrorText>{err}</ErrorText>
-      <Button title={voucher ? 'Draw my fortune (free)' : `Continue to payment · ${money(catalog.prices[tier].amount)}`} onPress={submit} loading={busy} />
+      <Button title={voucher || me.super ? 'Draw my fortune (free)' : `Continue to payment · ${money(catalog.prices[tier].amount)}`} onPress={submit} loading={busy} />
       <EntertainmentNote ai />
     </Screen>
   );

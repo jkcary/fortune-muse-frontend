@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { DeityArt } from '@/components/DeityArt';
+import { OAuthButtons } from '@/components/OAuthButtons';
 import { Button, EntertainmentNote, H1, P, Screen } from '@/components/ui';
 import { space } from '@/lib/theme';
 
@@ -17,8 +18,9 @@ export default function Welcome() {
         <P muted style={{ textAlign: 'center', marginBottom: space(6) }}>
           Draw a fortune with a friendly money spirit, get a lucky plan you can use today, and chat with people who asked the same question.
         </P>
-        <Button title="Create account" onPress={() => router.push('/register')} />
-        <Button title="I already have an account" kind="secondary" onPress={() => router.push('/login')} />
+        <OAuthButtons />
+        <Button title="Sign up with another email" kind="secondary" onPress={() => router.push('/register')} />
+        <Button title="I already have an account" kind="ghost" onPress={() => router.push('/login')} />
         <EntertainmentNote />
         <P muted style={{ textAlign: 'center', fontSize: 13 }}>For adults 18+ in the United States.</P>
       </View>
