@@ -7,7 +7,7 @@ import { DeityArt } from './DeityArt';
 
 const native = Platform.OS !== 'web';
 
-function useReducedMotion() {
+export function useReducedMotion() {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduce).catch(() => {});

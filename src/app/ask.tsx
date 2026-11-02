@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { SafetyCard } from '@/components/SafetyCard';
-import { SpiritStage } from '@/components/SpiritStage';
+import { SpiritStage, useReducedMotion } from '@/components/SpiritStage';
 import { Button, Card, Check, Chip, EntertainmentNote, ErrorText, H2, Loading, P, Screen } from '@/components/ui';
 import { api, money, type Deity, type IntakeSummary, type SafetyResponse, type Tier, type Topic, type Turn } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -13,7 +13,7 @@ import { useAuthed } from '@/lib/useAuthed';
 import { useVoiceInput } from '@/lib/voice';
 
 type Prices = Record<Tier, { amount: number; label: string; description: string }>;
-type IntakeResponse = { reply: string; ready: boolean; summary: IntakeSummary } | { safety: SafetyResponse };
+type IntakeResponse = { reply: string; ready: boolean; canStart: boolean; summary: IntakeSummary } | { safety: SafetyResponse };
 
 const MAX_LEN = 200;
 
@@ -38,6 +38,40 @@ function SendIcon() {
 function Bubble({ turn }: { turn: Turn }) {
   if (turn.role === 'user') return <View style={[s.bubble, s.mine]}><Text style={s.mineText}>{turn.text}</Text></View>;
   return <View style={[s.bubble, s.theirs]}><Text style={s.theirsText}>{turn.text}</Text></View>;
+}
+
+/**
+ * "Start the reading now": grey and disabled until the spirit knows enough, then gold with a twinkling glow.
+ * With Reduce Motion it stays gold without animating.
+ */
+function StartButton({ ready, busy, onPress, label }: { ready: boolean; busy: boolean; onPress: () => void; label: string }) {
+  const reduce = useReducedMotion();
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!ready || reduce) { pulse.setValue(0); return; }
+    const native = Platform.OS !== 'web';
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 750, easing: Easing.inOut(Easing.sin), useNativeDriver: native }),
+      Animated.timing(pulse, { toValue: 0, duration: 750, easing: Easing.inOut(Easing.sin), useNativeDriver: native }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [ready, reduce, pulse]);
+  const off = !ready || busy;
+  return (
+    <View style={s.startWrap}>
+      {ready && (
+        <Animated.View pointerEvents="none" style={[s.startGlow, !reduce && {
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.75] }),
+          transform: [{ scaleX: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }, { scaleY: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) }],
+        }]} />
+      )}
+      <Pressable onPress={off ? undefined : onPress} accessibilityRole="button" accessibilityState={{ disabled: off }}
+        style={({ pressed }) => [s.startNow, ready ? s.startOn : s.startOff, busy && { opacity: 0.6 }, pressed && ready && { opacity: 0.85 }]}>
+        <Text style={[s.startNowText, ready ? s.startOnText : s.startOffText]}>{ready ? `✨ ${label} ✨` : label}</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function useKeyboardOpen() {
@@ -66,6 +100,9 @@ export default function Ask() {
   const [thinking, setThinking] = useState(false);
   const [summary, setSummary] = useState<IntakeSummary | null>(null);
   const [readyLine, setReadyLine] = useState<string | null>(null);
+  // canStart: the spirit knows enough to draw. pending: its summary once it has finished asking, shown when the user taps Start.
+  const [canStart, setCanStart] = useState(false);
+  const [pending, setPending] = useState<IntakeSummary | null>(null);
   const [tier, setTier] = useState<Tier>('standard');
   const [useVoucher, setUseVoucher] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -97,7 +134,9 @@ export default function Ask() {
       // The transcript alternates user/spirit; after "Start now" on a spirit turn, the closing line is shown on its own.
       if (next.at(-1)?.role === 'user') setTurns([...next, { role: 'assistant', text: r.reply }]);
       else setReadyLine(r.reply);
-      if (r.ready) setSummary(r.summary);
+      setCanStart(r.canStart);
+      // The user asked to start: go straight to choosing a reading. Otherwise wait for their tap on the glowing button.
+      if (r.ready) { if (start) setSummary(r.summary); else setPending(r.summary); }
     } catch (e: any) {
       setTurns(turns);
       if (next.at(-1)?.role === 'user' && next !== turns) setInput(next.at(-1)!.text);
@@ -121,13 +160,14 @@ export default function Ask() {
   }
 
   function startNow() {
-    if (!asked) return setErr(t('Tell me your question first.'));
+    if (!canStart || thinking) return;
     voice.stop();
-    void talk(turns, true);
+    if (pending) setSummary(pending);
+    else void talk(turns, true);
   }
 
   function startOver() {
-    setTurns([]); setSummary(null); setReadyLine(null); setInput(''); setErr(null); setConsent(false);
+    setTurns([]); setSummary(null); setReadyLine(null); setInput(''); setErr(null); setConsent(false); setCanStart(false); setPending(null);
   }
 
   function toggleMic() {
@@ -253,9 +293,12 @@ export default function Ask() {
           <ErrorText>{voiceError}</ErrorText>
           <ErrorText>{err}</ErrorText>
           {asked && (
-            <Pressable onPress={startNow} disabled={thinking} accessibilityRole="button" style={[s.startNow, thinking && { opacity: 0.5 }]}>
-              <Text style={s.startNowText}>{t('Start the reading now')}</Text>
-            </Pressable>
+            <>
+              <StartButton ready={canStart} busy={thinking} onPress={startNow} label={t('Start the reading now')} />
+              <Text style={[s.startHint, canStart && { color: colors.goldDeep }]}>
+                {t(canStart ? 'Ready! Tap to draw your fortune, or keep chatting.' : 'Answer a few more questions and we can draw your fortune.')}
+              </Text>
+            </>
           )}
           <View style={s.composer}>
             <TextInput value={input} onChangeText={(v) => setInput(v.slice(0, MAX_LEN))} onSubmitEditing={() => send()}
@@ -287,8 +330,16 @@ const s = StyleSheet.create({
   theirsText: { color: colors.ink, fontSize: 15, lineHeight: 21 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },
   dock: { paddingTop: space(2), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  startNow: { alignSelf: 'center', paddingHorizontal: space(4), paddingVertical: space(2), borderRadius: 999, borderWidth: 1, borderColor: colors.goldDeep, backgroundColor: '#FFFBF1', marginBottom: space(2) },
-  startNowText: { color: colors.goldDeep, fontWeight: '700', fontSize: 14 },
+  startWrap: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: space(1) },
+  startGlow: { position: 'absolute', top: -4, bottom: -4, left: -8, right: -8, borderRadius: 999, backgroundColor: '#FFD86B',
+    shadowColor: '#F5B700', shadowOpacity: 0.9, shadowRadius: 16, shadowOffset: { width: 0, height: 0 } },
+  startNow: { paddingHorizontal: space(5), paddingVertical: space(2) + 2, borderRadius: 999, borderWidth: 1 },
+  startOn: { backgroundColor: colors.gold, borderColor: '#B8860B' },
+  startOff: { backgroundColor: '#ECE7DD', borderColor: '#DAD3C6' },
+  startNowText: { fontWeight: '700', fontSize: 15 },
+  startOnText: { color: '#fff' },
+  startOffText: { color: '#A39B8E' },
+  startHint: { textAlign: 'center', fontSize: 12, color: colors.muted, marginBottom: space(2) },
   composer: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(3), fontSize: 15, color: colors.ink },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
