@@ -13,6 +13,7 @@ export const ZH_CHAT: [string, string, string][] = [
   ['Tell me your question first.', '请先告诉我你的问题。', '請先告訴我你的問題。'],
   ['Start the reading now', '现在开始求签', '現在開始求籤'],
   ['{name} is typing…', '{name}正在输入…', '{name}正在輸入…'],
+  ['{name} is listening…', '{name}正在听…', '{name}正在聽…'],
   ['Here’s what I’ll read for you', '我将为你解读的是', '我將為你解讀的是'],
   ['Situation', '现状', '現況'],
   ['Timeframe', '时间', '時間'],

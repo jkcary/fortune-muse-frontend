@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
-import { DeityArt } from '@/components/DeityArt';
 import { SafetyCard } from '@/components/SafetyCard';
+import { SpiritStage } from '@/components/SpiritStage';
 import { Button, Card, Check, Chip, EntertainmentNote, ErrorText, H2, Loading, P, Screen } from '@/components/ui';
 import { api, money, type Deity, type IntakeSummary, type SafetyResponse, type Tier, type Topic, type Turn } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -34,19 +34,26 @@ function SendIcon() {
   );
 }
 
-function Bubble({ turn, deity }: { turn: Turn; deity: Deity }) {
+/** Earlier lines, below the stage: the user on the right, the spirit on the left. */
+function Bubble({ turn }: { turn: Turn }) {
   if (turn.role === 'user') return <View style={[s.bubble, s.mine]}><Text style={s.mineText}>{turn.text}</Text></View>;
-  return (
-    <View style={s.deityRow}>
-      <DeityArt theme={deity.theme} size={32} />
-      <View style={[s.bubble, s.theirs]}><Text style={s.theirsText}>{turn.text}</Text></View>
-    </View>
-  );
+  return <View style={[s.bubble, s.theirs]}><Text style={s.theirsText}>{turn.text}</Text></View>;
+}
+
+function useKeyboardOpen() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setOpen(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+  return open;
 }
 
 /**
- * Ask: a short conversation with the spirit before the reading (POST /readings/intake), typed or spoken.
- * Chatting is free; once the spirit has what it needs the user picks a tier and pays as before.
+ * Ask: a face-to-face conversation with the spirit before the reading (POST /readings/intake), typed or spoken.
+ * The spirit and its latest line stay on stage at the top, earlier lines scroll below, the input is pinned
+ * at the bottom. Chatting is free; once the spirit has what it needs the user picks a tier and pays as before.
  */
 export default function Ask() {
   const me = useAuthed();
@@ -66,6 +73,10 @@ export default function Ask() {
   const [busy, setBusy] = useState(false);
   const [safety, setSafety] = useState<SafetyResponse | null>(null);
   const [devOrder, setDevOrder] = useState<{ orderId: string; readingId: string; amount: number } | null>(null);
+  const [nudge, setNudge] = useState(0);
+  const keyboardOpen = useKeyboardOpen();
+  const { height } = useWindowDimensions();
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
 
   // Speech is added to whatever was already typed.
   const typedBefore = useRef('');
@@ -74,7 +85,6 @@ export default function Ask() {
   useEffect(() => { api('/deities').then(setCatalog).catch((e) => setErr(e.message)); }, []);
   if (!me || !catalog) return <Screen back><Loading /></Screen>;
   const deity = catalog.deities.find((d) => d.id === params.deityId) ?? catalog.deities[0];
-  const name = t(deity.name);
   const voucher = !me.super && useVoucher && me.freeReadings > 0;
   const asked = turns.some((x) => x.role === 'user');
 
@@ -106,6 +116,7 @@ export default function Ask() {
     const next: Turn[] = [...turns, { role: 'user', text: msg }];
     setTurns(next);
     setInput('');
+    setNudge((n) => n + 1);
     void talk(next, false);
   }
 
@@ -173,34 +184,79 @@ export default function Ask() {
   const voiceError = voice.error === 'denied' ? t('Microphone access is needed for voice input.')
     : voice.error ? t('Voice input didn’t catch that. Please try again or type.') : null;
 
+  // The stage shows the spirit's latest line; everything before it scrolls below.
+  const opener = t(topic === 'wealth'
+    ? 'What would you like to ask about money today? Tell me in your own words.'
+    : 'What would you like to ask about love today? Tell me in your own words.');
+  const lastSpirit = turns.map((x) => x.role).lastIndexOf('assistant');
+  const onStage = readyLine ?? (lastSpirit >= 0 ? turns[lastSpirit].text : `${t(deity.greeting)}\n${opener}`);
+  const history = turns.filter((_, i) => thinking || readyLine !== null || i !== lastSpirit);
+  const compact = keyboardOpen || height < 680 || summary !== null;
+
   return (
-    <Screen back title={t(topic === 'wealth' ? '💰 Ask about wealth' : '❤️ Ask about love')}>
-      <Bubble deity={deity} turn={{ role: 'assistant', text: t(deity.greeting) }} />
-      <Bubble deity={deity} turn={{ role: 'assistant', text: t(topic === 'wealth'
-        ? 'What would you like to ask about money today? Tell me in your own words.'
-        : 'What would you like to ask about love today? Tell me in your own words.') }} />
+    <Screen back scroll={false} title={t(topic === 'wealth' ? '💰 Ask about wealth' : '❤️ Ask about love')}>
+      <SpiritStage deity={deity} line={onStage} thinking={thinking} listening={voice.listening} nudge={nudge} compact={compact} />
 
-      {!asked && (
-        <>
-          <P muted style={{ fontSize: 13, marginTop: space(2), marginBottom: space(1) }}>{t('Or start with one of these:')}</P>
-          <View style={s.wrap}>
-            {catalog.questionTemplates[topic].map((q) => <Chip key={q} label={t(q)} onPress={() => send(t(q))} />)}
-          </View>
-        </>
-      )}
+      <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: space(3) }} keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => { if (!summary) scroller.current?.scrollToEnd({ animated: true }); }}>
+        {!asked && (
+          <>
+            <P muted style={{ fontSize: 13, marginTop: space(1), marginBottom: space(1) }}>{t('Or start with one of these:')}</P>
+            <View style={s.wrap}>
+              {catalog.questionTemplates[topic].map((q) => <Chip key={q} label={t(q)} onPress={() => send(t(q))} />)}
+            </View>
+          </>
+        )}
+        {history.map((turn, i) => <Bubble key={i} turn={turn} />)}
+        {summary && (
+          <>
+              <Card style={{ marginTop: space(3), backgroundColor: '#FFFBF1' }}>
+                <H2>{t('Here’s what I’ll read for you')}</H2>
+                <P style={{ fontWeight: '700', marginBottom: space(2) }}>“{summary.question}”</P>
+                {([['Situation', summary.context], ['Timeframe', summary.timeframe], ['Hoping for', summary.goal]] as const)
+                  .filter(([, v]) => v.trim())
+                  .map(([label, v]) => <P key={label} muted style={{ fontSize: 13 }}>{t(label)}: {v}</P>)}
+                <Pressable onPress={startOver} accessibilityRole="button" style={{ marginTop: space(2) }}>
+                  <Text style={{ color: colors.goldDeep, fontWeight: '600' }}>{t('Start over')}</Text>
+                </Pressable>
+              </Card>
 
-      {turns.map((turn, i) => <Bubble key={i} deity={deity} turn={turn} />)}
-      {readyLine && <Bubble deity={deity} turn={{ role: 'assistant', text: readyLine }} />}
-      {thinking && (
-        <View style={s.deityRow} accessibilityLiveRegion="polite">
-          <DeityArt theme={deity.theme} size={32} />
-          <View style={[s.bubble, s.theirs]}><Text style={s.dots}>•••</Text></View>
-          <Text style={s.typing}>{t('{name} is typing…', { name })}</Text>
-        </View>
-      )}
+              <H2 style={{ marginTop: space(3) }}>{t('Choose your reading')}</H2>
+              {me.super && <P muted style={{ fontSize: 13, marginBottom: space(2) }}>{t('Super account: every reading is free.')}</P>}
+              {!me.super && me.freeReadings > 0 && (
+                <Check checked={useVoucher} onChange={setUseVoucher}>{t('Use a free reading voucher (Standard reading)')}</Check>
+              )}
+              {!voucher && (Object.keys(catalog.prices) as Tier[]).map((tier_) => (
+                <Pressable key={tier_} onPress={() => setTier(tier_)} accessibilityRole="radio" accessibilityState={{ checked: tier === tier_ }}
+                  style={[s.tier, tier === tier_ && { borderColor: colors.red, backgroundColor: '#FFF4F2' }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.tierName}>{t(catalog.prices[tier_].label)}</Text>
+                    <P muted style={{ fontSize: 13 }}>{t(catalog.prices[tier_].description)}</P>
+                  </View>
+                  <Text style={s.price}>{me.super ? t('Free') : money(catalog.prices[tier_].amount)}</Text>
+                </Pressable>
+              ))}
+              {!voucher && !me.super && <P muted style={{ fontSize: 12, marginBottom: space(3) }}>{t('Prices in USD. Sales tax is added at checkout where it applies.')}</P>}
 
-      {!summary ? (
-        <>
+              <Check checked={consent} onChange={setConsent}>
+                {t('I understand this reading is digital content for entertainment, delivered right after payment. If it fails to generate I’m refunded automatically.')}
+              </Check>
+              <ErrorText>{err}</ErrorText>
+              <Button title={voucher || me.super ? t('Draw my fortune (free)') : t('Continue to payment · {price}', { price: money(catalog.prices[tier].amount) })} onPress={submit} loading={busy} />
+          </>
+        )}
+        <EntertainmentNote ai />
+      </ScrollView>
+
+      {!summary && (
+        <View style={s.dock}>
+          <ErrorText>{voiceError}</ErrorText>
+          <ErrorText>{err}</ErrorText>
+          {asked && (
+            <Pressable onPress={startNow} disabled={thinking} accessibilityRole="button" style={[s.startNow, thinking && { opacity: 0.5 }]}>
+              <Text style={s.startNowText}>{t('Start the reading now')}</Text>
+            </Pressable>
+          )}
           <View style={s.composer}>
             <TextInput value={input} onChangeText={(v) => setInput(v.slice(0, MAX_LEN))} onSubmitEditing={() => send()}
               placeholder={voice.listening ? t('Listening…') : t('Type or tap the mic…')} placeholderTextColor="#B0A390"
@@ -217,63 +273,23 @@ export default function Ask() {
             </Pressable>
           </View>
           <Text style={s.count}>{input.length}/{MAX_LEN}</Text>
-          <ErrorText>{voiceError}</ErrorText>
-          <ErrorText>{err}</ErrorText>
-          {asked && <Button kind="secondary" title={t('Start the reading now')} onPress={startNow} disabled={thinking} />}
-        </>
-      ) : (
-        <>
-          <Card style={{ marginTop: space(3), backgroundColor: '#FFFBF1' }}>
-            <H2>{t('Here’s what I’ll read for you')}</H2>
-            <P style={{ fontWeight: '700', marginBottom: space(2) }}>“{summary.question}”</P>
-            {([['Situation', summary.context], ['Timeframe', summary.timeframe], ['Hoping for', summary.goal]] as const)
-              .filter(([, v]) => v.trim())
-              .map(([label, v]) => <P key={label} muted style={{ fontSize: 13 }}>{t(label)}: {v}</P>)}
-            <Pressable onPress={startOver} accessibilityRole="button" style={{ marginTop: space(2) }}>
-              <Text style={{ color: colors.goldDeep, fontWeight: '600' }}>{t('Start over')}</Text>
-            </Pressable>
-          </Card>
-
-          <H2 style={{ marginTop: space(3) }}>{t('Choose your reading')}</H2>
-          {me.super && <P muted style={{ fontSize: 13, marginBottom: space(2) }}>{t('Super account: every reading is free.')}</P>}
-          {!me.super && me.freeReadings > 0 && (
-            <Check checked={useVoucher} onChange={setUseVoucher}>{t('Use a free reading voucher (Standard reading)')}</Check>
-          )}
-          {!voucher && (Object.keys(catalog.prices) as Tier[]).map((tier_) => (
-            <Pressable key={tier_} onPress={() => setTier(tier_)} accessibilityRole="radio" accessibilityState={{ checked: tier === tier_ }}
-              style={[s.tier, tier === tier_ && { borderColor: colors.red, backgroundColor: '#FFF4F2' }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.tierName}>{t(catalog.prices[tier_].label)}</Text>
-                <P muted style={{ fontSize: 13 }}>{t(catalog.prices[tier_].description)}</P>
-              </View>
-              <Text style={s.price}>{me.super ? t('Free') : money(catalog.prices[tier_].amount)}</Text>
-            </Pressable>
-          ))}
-          {!voucher && !me.super && <P muted style={{ fontSize: 12, marginBottom: space(3) }}>{t('Prices in USD. Sales tax is added at checkout where it applies.')}</P>}
-
-          <Check checked={consent} onChange={setConsent}>
-            {t('I understand this reading is digital content for entertainment, delivered right after payment. If it fails to generate I’m refunded automatically.')}
-          </Check>
-          <ErrorText>{err}</ErrorText>
-          <Button title={voucher || me.super ? t('Draw my fortune (free)') : t('Continue to payment · {price}', { price: money(catalog.prices[tier].amount) })} onPress={submit} loading={busy} />
-        </>
+        </View>
       )}
-      <EntertainmentNote ai />
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  deityRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space(2), marginVertical: space(1) },
-  bubble: { maxWidth: '82%', borderRadius: radius, paddingHorizontal: space(3), paddingVertical: space(2) + 2 },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.red, marginVertical: space(1) },
+  bubble: { maxWidth: '82%', borderRadius: radius, paddingHorizontal: space(3), paddingVertical: space(2), marginVertical: space(1) },
+  mine: { alignSelf: 'flex-end', backgroundColor: colors.red },
   mineText: { color: '#fff', fontSize: 15, lineHeight: 21 },
-  theirs: { flexShrink: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line },
+  theirs: { alignSelf: 'flex-start', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line },
   theirsText: { color: colors.ink, fontSize: 15, lineHeight: 21 },
-  dots: { color: colors.muted, fontSize: 16, letterSpacing: 2 },
-  typing: { color: colors.muted, fontSize: 12, marginBottom: space(2) },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },
-  composer: { flexDirection: 'row', alignItems: 'center', gap: space(2), marginTop: space(3) },
+  dock: { paddingTop: space(2), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  startNow: { alignSelf: 'center', paddingHorizontal: space(4), paddingVertical: space(2), borderRadius: 999, borderWidth: 1, borderColor: colors.goldDeep, backgroundColor: '#FFFBF1', marginBottom: space(2) },
+  startNowText: { color: colors.goldDeep, fontWeight: '700', fontSize: 14 },
+  composer: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(3), fontSize: 15, color: colors.ink },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   micOff: { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line },

@@ -11,7 +11,7 @@ import { colors, fonts, maxWidth, radius, space } from '@/lib/theme';
 export function Screen({ children, scroll = true, title, back }: { children: ReactNode; scroll?: boolean; title?: string; back?: boolean }) {
   const t = useT();
   const body = (
-    <View style={s.inner}>
+    <View style={[s.inner, !scroll && s.fixed]}>
       {(title || back) && (
         <View style={s.header}>
           {back && (
@@ -115,6 +115,8 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1 },
   inner: { width: '100%', maxWidth, alignSelf: 'center', paddingHorizontal: space(4), paddingBottom: space(10), flexGrow: 1 },
+  // Non-scrolling screens fill exactly the window so their own lists scroll and footers stay visible.
+  fixed: { flex: 1, paddingBottom: space(3) },
   header: { paddingVertical: space(3), gap: space(1) },
   back: { color: colors.goldDeep, fontSize: 16 },
   headerTitle: { fontFamily: fonts.display, fontSize: 24, color: colors.ink, fontWeight: '700' },
