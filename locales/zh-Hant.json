@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "財神籤使用麥克風，讓你可以直接說出想問財神的問題。",
+    "NSSpeechRecognitionUsageDescription": "財神籤會把你說的話轉成文字，讓財神讀懂你的問題。不會儲存錄音。"
+  }
+}

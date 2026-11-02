@@ -42,8 +42,19 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Fortune Muse uses the microphone so you can speak your question to your fortune spirit.",
+          "speechRecognitionPermission": "Fortune Muse turns what you say into text so your fortune spirit can read your question. Audio is not stored."
+        }
+      ]
     ],
+    "locales": {
+      "zh-Hans": "./locales/zh-Hans.json",
+      "zh-Hant": "./locales/zh-Hant.json"
+    },
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true

@@ -68,7 +68,13 @@ export interface Reading {
   id: string; deityId: string; topic: Topic; tier: Tier; question: string;
   status: 'awaiting_payment' | 'generating' | 'ready' | 'failed' | 'refunded';
   price: number; orderId: string; createdAt: string; result: ReadingResult | null;
+  /** The conversation before the reading, if there was one. */
+  intake: Intake | null;
 }
+
+export interface Turn { role: 'user' | 'assistant'; text: string }
+export interface IntakeSummary { question: string; context: string; timeframe: string; goal: string }
+export interface Intake { turns: Turn[]; summary: IntakeSummary }
 
 export interface SafetyResponse { kind: string; message: string; resources: { name: string; detail: string; url: string }[] }
 

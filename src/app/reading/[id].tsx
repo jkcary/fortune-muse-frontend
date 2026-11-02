@@ -54,6 +54,7 @@ export default function ReadingScreen() {
   const [note, setNote] = useState('');
   const [fbState, setFbState] = useState<'idle' | 'saved' | 'not_saved'>('idle');
   const [joining, setJoining] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -125,6 +126,20 @@ export default function ReadingScreen() {
         <H1 style={{ textAlign: 'center', fontSize: 24 }}>{t(reading.topic === 'wealth' ? '💰 Your wealth fortune' : '❤️ Your love fortune')}</H1>
         <P muted style={{ textAlign: 'center' }}>“{reading.question}”</P>
       </View>
+
+      {reading.intake?.turns.length ? (
+        <Card>
+          <Pressable onPress={() => setShowChat((v) => !v)} accessibilityRole="button" style={s.chatHead}>
+            <Text style={s.label}>{t('Our conversation')}</Text>
+            <Text style={s.link}>{t(showChat ? 'Hide' : 'Show')}</Text>
+          </Pressable>
+          {showChat && reading.intake.turns.map((turn, i) => (
+            <P key={i} style={[s.chatLine, turn.role === 'user' && { color: colors.red }]}>
+              <Text style={{ fontWeight: '700' }}>{turn.role === 'user' ? t('You') : t(deity?.name ?? 'Your spirit')}: </Text>{turn.text}
+            </P>
+          ))}
+        </Card>
+      ) : null}
 
       <Card style={{ backgroundColor: '#FFFBF1' }}>
         <Text style={s.deityMsg}>{res.deityMessage}</Text>
@@ -201,5 +216,7 @@ const s = StyleSheet.create({
   icon: { fontSize: 22, width: 28, textAlign: 'center' },
   label: { fontSize: 12, fontWeight: '700', color: colors.muted, letterSpacing: 0.5, marginBottom: 2, textTransform: 'uppercase' },
   link: { color: colors.goldDeep, fontWeight: '600' },
+  chatHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chatLine: { fontSize: 14, marginTop: space(2) },
   deityMsg: { fontFamily: fonts.display, fontSize: 17, fontStyle: 'italic', color: colors.goldDeep, marginBottom: space(2) },
 });

@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "财神签使用麦克风，让你可以直接说出想问财神的问题。",
+    "NSSpeechRecognitionUsageDescription": "财神签会把你说的话转成文字，让财神读懂你的问题。不会保存录音。"
+  }
+}
