@@ -90,11 +90,12 @@ export function SpiritStage({ deity, line, thinking, listening, nudge, compact }
   }, [listening, ring, reduce]);
 
   const glow = size * 1.3;
+  const loveAccent = deity.topic === 'love' ? deity.image_assets.primary : null;
   return (
     <View style={[s.stage, compact && s.stageCompact]}>
       <View style={[s.portrait, { width: glow, height: glow }]}>
-        <View style={[s.glowOuter, { width: glow, height: glow, borderRadius: glow / 2 }]} />
-        <View style={[s.glowInner, { width: glow * 0.78, height: glow * 0.78, borderRadius: glow * 0.39 }]} />
+        <View style={[s.glowOuter, { width: glow, height: glow, borderRadius: glow / 2 }, loveAccent && { backgroundColor: `${loveAccent}24` }]} />
+        <View style={[s.glowInner, { width: glow * 0.78, height: glow * 0.78, borderRadius: glow * 0.39 }, loveAccent && { backgroundColor: `${loveAccent}38` }]} />
         {listening && (
           <Animated.View pointerEvents="none" style={[s.ring, { width: glow * 0.86, height: glow * 0.86, borderRadius: glow * 0.43 },
             reduce ? { opacity: 0.8 } : {
@@ -110,7 +111,7 @@ export function SpiritStage({ deity, line, thinking, listening, nudge, compact }
           <DeityArt theme={deity.theme} size={size} />
         </Animated.View>
       </View>
-      {!compact && <Text style={s.name}>{t(deity.name)} · {t(deity.title)}</Text>}
+      {!compact && <Text style={[s.name, loveAccent && { color: loveAccent }]}>{t(deity.name)} · {t(deity.title)}</Text>}
       <View style={s.speech} accessibilityLiveRegion="polite">
         <View style={s.tail} />
         {thinking ? <ThinkingDots /> : <Text style={[s.speechText, compact && { fontSize: 15, lineHeight: 21 }]}>{line}</Text>}

@@ -31,7 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -43,3 +44,13 @@ example
 /android
 
 .env
+
+# Generated native resource exports and dependency audit
+output/native-bundles/
+output/npm-audit-oracle.json
+output/i18n-tools/
+
+# Local browser sessions, screenshots, QA fixtures and build artifacts
+.playwright-cli/
+output/
+*.log

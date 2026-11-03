@@ -9,7 +9,7 @@ import { useAuthed } from '@/lib/useAuthed';
 
 const tierName = (tier: string) => tier.charAt(0).toUpperCase() + tier.slice(1);
 
-interface Order { id: string; amount: number; tax: number; status: string; provider: string; created_at: string; reading_id: string | null; tier: string | null }
+interface Order { id: string; amount: number; tax: number; status: string; provider: string; created_at: string; reading_id: string | null; tier: string | null; oracle_id?:string|null }
 
 export default function History() {
   const me = useAuthed();
@@ -20,8 +20,8 @@ export default function History() {
   const [reason, setReason] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const load = () => {
-    api('/readings').then((r) => setReadings(r.readings));
-    api('/orders').then((r) => setOrders(r.orders));
+    api('/readings').then((r) => setReadings(r.readings)).catch(e=>{setErr(e.message);setReadings([]);});
+    api('/orders').then((r) => setOrders(r.orders)).catch(e=>setErr(e.message));
   };
   useEffect(load, []);
   if (!me || !readings) return <Screen back><Loading /></Screen>;
@@ -37,13 +37,14 @@ export default function History() {
           </Card>
         </Pressable>
       ))}
-      <H2 style={{ marginTop: space(4) }}>{t('Receipts')}</H2>
+      <ErrorText>{err}</ErrorText><H2 style={{ marginTop: space(4) }}>{t('Receipts')}</H2>
       {orders.map((o) => (
         <Card key={o.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <P>{formatDate(o.created_at)} · {t(o.tier ? tierName(o.tier) : 'Reading')}</P>
             <Text style={{ fontWeight: '700' }}>{o.provider === 'voucher' ? t('Voucher') : o.provider === 'comp' ? t('Free') : money(o.amount + o.tax)}</Text>
           </View>
+          {o.oracle_id && <Button title="Open ORACLE ONE reading ↗" kind="ghost" onPress={()=>router.push('/oracle/'+o.oracle_id)}/>}
           <P muted style={{ fontSize: 12 }}>{t('Status: {status}', { status: t(o.status.replace('_', ' ')) })}{o.tax ? ` · ${t('includes {tax} tax', { tax: money(o.tax) })}` : ''}</P>
           {o.status === 'paid' && o.provider !== 'voucher' && o.provider !== 'comp' && refundFor !== o.id && (
             <Pressable onPress={() => setRefundFor(o.id)}><Text style={{ color: colors.goldDeep, marginTop: space(2) }}>{t('Request a refund')}</Text></Pressable>

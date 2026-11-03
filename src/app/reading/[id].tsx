@@ -141,7 +141,7 @@ export default function ReadingScreen() {
         </Card>
       ) : null}
 
-      <Card style={{ backgroundColor: '#FFFBF1' }}>
+      <Card style={{ backgroundColor: colors.card }}>
         <Text style={s.deityMsg}>{res.deityMessage}</Text>
         <P>{res.answer}</P>
       </Card>
@@ -179,7 +179,7 @@ export default function ReadingScreen() {
         <Card><H2>{t('Reflect on this')}</H2>{res.reflections.map((q) => <P key={q}>• {q}</P>)}</Card>
       ) : null}
 
-      <Card style={{ backgroundColor: '#F4F9F5', borderColor: '#D5E8DB' }}>
+      <Card style={{ backgroundColor: '#142019', borderColor: '#30483B' }}>
         <P>💛 {res.gentleReminder}</P>
       </Card>
 

@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Fortune Muse",
+    "name": "ORACLE ONE",
     "slug": "fortune-muse",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/oracle-one-icon.png",
     "scheme": "fortunemuse",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/oracle-one-icon.png",
       "bundleIdentifier": "app.fortunemuse",
       "supportsTablet": false,
       "infoPlist": {
@@ -17,28 +17,27 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFF8EC",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#090B10",
+        "foregroundImage": "./assets/images/oracle-one-icon.png",
+        "monochromeImage": "./assets/images/oracle-one-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "app.fortunemuse"
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png",
-      "name": "Fortune Muse",
-      "themeColor": "#B8322A",
-      "backgroundColor": "#FFF8EC"
+      "favicon": "./assets/images/oracle-one-favicon.png",
+      "name": "ORACLE ONE",
+      "themeColor": "#15101F",
+      "backgroundColor": "#15101F"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFF8EC",
-          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#15101F",
+          "image": "./assets/images/oracle-one-icon.png",
           "imageWidth": 76
         }
       ],
@@ -48,6 +47,16 @@
         {
           "microphonePermission": "Fortune Muse uses the microphone so you can speak your question to your fortune spirit.",
           "speechRecognitionPermission": "Fortune Muse turns what you say into text so your fortune spirit can read your question. Audio is not stored."
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false,
+          "recordAudioAndroid": false,
+          "microphonePermission": "Fortune Muse uses the microphone so you can speak your question to your fortune spirit."
         }
       ]
     ],
@@ -59,6 +68,6 @@
       "typedRoutes": false,
       "reactCompiler": true
     },
-    "description": "Fortune Muse (财神签) — playful daily fortunes for adults. For entertainment only."
+    "description": "I Ching readings for love and money. An open question, a different perspective. For adults 18+."
   }
 }

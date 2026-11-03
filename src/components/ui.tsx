@@ -1,95 +1,272 @@
-import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { LocalizedText as Text } from "@/components/LocalizedText";
+import { router } from "expo-router";
+import type { ReactNode } from "react";
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-  type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useT } from '@/lib/i18n';
-import { colors, fonts, maxWidth, radius, space } from '@/lib/theme';
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useT } from "@/lib/i18n";
+import { colors, fonts, maxWidth, radius, space } from "@/lib/theme";
 
-export function Screen({ children, scroll = true, title, back }: { children: ReactNode; scroll?: boolean; title?: string; back?: boolean }) {
+export function Screen({
+  children,
+  scroll = true,
+  title,
+  back,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  title?: string;
+  back?: boolean;
+}) {
   const t = useT();
   const body = (
     <View style={[s.inner, !scroll && s.fixed]}>
       {(title || back) && (
         <View style={s.header}>
           {back && (
-            <Pressable accessibilityRole="button" accessibilityLabel={t('Go back')} hitSlop={12}
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}>
-              <Text style={s.back}>{t('‹ Back')}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("Go back")}
+              hitSlop={12}
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/home")
+              }
+            >
+              <Text style={s.back}>{t("‹ Back")}</Text>
             </Pressable>
           )}
-          {title && <Text style={s.headerTitle} accessibilityRole="header">{title}</Text>}
+          {title && (
+            <Text style={s.headerTitle} accessibilityRole="header">
+              {title}
+            </Text>
+          )}
         </View>
       )}
       {children}
     </View>
   );
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
-      {scroll ? <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">{body}</ScrollView> : body}
+    <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+      {scroll ? (
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {body}
+        </ScrollView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   );
 }
 
-export function H1({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[s.h1, style]} accessibilityRole="header">{children}</Text>;
+export function H1({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  return (
+    <Text style={[s.h1, style]} accessibilityRole="header">
+      {children}
+    </Text>
+  );
 }
-export function H2({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[s.h2, style]} accessibilityRole="header">{children}</Text>;
+export function H2({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  return (
+    <Text style={[s.h2, style]} accessibilityRole="header">
+      {children}
+    </Text>
+  );
 }
-export function P({ children, style, muted }: { children: ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
-  return <Text style={[s.p, muted && { color: colors.muted }, style]}>{children}</Text>;
+export function P({
+  children,
+  style,
+  muted,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+  muted?: boolean;
+}) {
+  return (
+    <Text style={[s.p, muted && { color: colors.muted }, style]}>
+      {children}
+    </Text>
+  );
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function Card({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
   return <View style={[s.card, style]}>{children}</View>;
 }
 
-export function Button({ title, onPress, kind = 'primary', loading, disabled, style }: {
-  title: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'ghost' | 'danger'; loading?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>;
+export function Button({
+  title,
+  onPress,
+  kind = "primary",
+  loading,
+  disabled,
+  style,
+}: {
+  title: string;
+  onPress: () => void;
+  kind?: "primary" | "secondary" | "ghost" | "danger";
+  loading?: boolean;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const off = disabled || loading;
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: off }} onPress={off ? undefined : onPress}
-      style={({ pressed }) => [s.btn, s[`btn_${kind}`], off && { opacity: 0.5 }, pressed && { opacity: 0.8 }, style]}>
-      {loading ? <ActivityIndicator color={kind === 'primary' || kind === 'danger' ? '#fff' : colors.ink} />
-        : <Text style={[s.btnText, (kind === 'secondary' || kind === 'ghost') && { color: colors.ink }]}>{title}</Text>}
+    <Pressable
+      accessibilityRole="button"
+      aria-disabled={off}
+      accessibilityState={{ disabled: off }}
+      onPress={off ? undefined : onPress}
+      style={({ pressed }) => [
+        s.btn,
+        s[`btn_${kind}`],
+        off && { opacity: 0.5 },
+        pressed && { opacity: 0.8 },
+        style,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator
+          color={kind === "primary" || kind === "danger" ? "#fff" : colors.ink}
+        />
+      ) : (
+        <Text
+          style={[
+            s.btnText,
+            {
+              color:
+                kind === "primary"
+                  ? "#13151A"
+                  : kind === "danger"
+                    ? "#fff"
+                    : colors.ink,
+            },
+          ]}
+        >
+          {title}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-export function Field({ label, error, ...props }: TextInputProps & { label: string; error?: string }) {
+export function Field({
+  label,
+  error,
+  ...props
+}: TextInputProps & { label: string; error?: string }) {
+  const t = useT();
   return (
     <View style={{ marginBottom: space(3) }}>
       <Text style={s.label}>{label}</Text>
-      <TextInput placeholderTextColor="#B0A390" accessibilityLabel={label} {...props} style={[s.input, props.multiline && { minHeight: 96, textAlignVertical: 'top' }, props.style]} />
+      <TextInput
+        placeholderTextColor="#B0A390"
+        accessibilityLabel={t(label)}
+        {...props}
+        placeholder={props.placeholder ? t(props.placeholder) : undefined}
+        style={[
+          s.input,
+          props.multiline && { minHeight: 96, textAlignVertical: "top" },
+          props.style,
+        ]}
+      />
       {error ? <Text style={s.error}>{error}</Text> : null}
     </View>
   );
 }
 
-export function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
+export function Check({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  children: ReactNode;
+}) {
   return (
-    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={() => onChange(!checked)} style={s.checkRow}>
-      <View style={[s.box, checked && s.boxOn]}>{checked && <Text style={{ color: '#fff', fontWeight: '700' }}>✓</Text>}</View>
+    <Pressable
+      accessibilityRole="checkbox"
+      aria-checked={checked}
+      accessibilityState={{ checked }}
+      onPress={() => onChange(!checked)}
+      style={s.checkRow}
+    >
+      <View style={[s.box, checked && s.boxOn]}>
+        {checked && (
+          <Text style={{ color: "#14171E", fontWeight: "700" }}>✓</Text>
+        )}
+      </View>
       <Text style={[s.p, { flex: 1 }]}>{children}</Text>
     </Pressable>
   );
 }
 
-export function Chip({ label, selected, onPress, color = colors.gold }: { label: string; selected?: boolean; onPress?: () => void; color?: string }) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  color = colors.gold,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress?: () => void;
+  color?: string;
+}) {
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress}
-      style={[s.chip, selected && { backgroundColor: color, borderColor: color }]}>
-      <Text style={[s.chipText, selected && { color: '#fff' }]}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[
+        s.chip,
+        selected && { backgroundColor: color, borderColor: color },
+      ]}
+    >
+      <Text style={[s.chipText, selected && { color: "#14171E" }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 export function ErrorText({ children }: { children?: string | null }) {
-  return children ? <Text style={[s.error, { marginBottom: space(3) }]} accessibilityLiveRegion="polite">{children}</Text> : null;
+  return children ? (
+    <Text
+      style={[s.error, { marginBottom: space(3) }]}
+      accessibilityLiveRegion="polite"
+    >
+      {children}
+    </Text>
+  ) : null;
 }
 
 /** Required on every reading surface (plan §M4 / §M9). */
@@ -97,16 +274,25 @@ export function EntertainmentNote({ ai }: { ai?: boolean }) {
   const t = useT();
   return (
     <View style={s.note} accessibilityRole="text">
-      <Text style={s.noteText}>{t('✨ For entertainment purposes only. Not financial, medical, or legal advice.')}{ai ? ` ${t('This content is generated by AI.')}` : ''}</Text>
+      <Text style={s.noteText}>
+        {t(
+          "✨ For entertainment purposes only. Not financial, medical, or legal advice.",
+        )}
+        {ai ? ` ${t("This content is generated by AI.")}` : ""}
+      </Text>
     </View>
   );
 }
 
 export function Loading({ label }: { label?: string }) {
   return (
-    <View style={{ alignItems: 'center', padding: space(10) }}>
+    <View style={{ alignItems: "center", padding: space(10) }}>
       <ActivityIndicator color={colors.gold} size="large" />
-      {label ? <P muted style={{ marginTop: space(3) }}>{label}</P> : null}
+      {label ? (
+        <P muted style={{ marginTop: space(3) }}>
+          {label}
+        </P>
+      ) : null}
     </View>
   );
 }
@@ -114,30 +300,114 @@ export function Loading({ label }: { label?: string }) {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1 },
-  inner: { width: '100%', maxWidth, alignSelf: 'center', paddingHorizontal: space(4), paddingBottom: space(10), flexGrow: 1 },
+  inner: {
+    width: "100%",
+    maxWidth,
+    alignSelf: "center",
+    paddingHorizontal: space(4),
+    paddingBottom: space(10),
+    flexGrow: 1,
+  },
   // Non-scrolling screens fill exactly the window so their own lists scroll and footers stay visible.
   fixed: { flex: 1, paddingBottom: space(3) },
-  header: { paddingVertical: space(3), gap: space(1) },
+  header: { paddingTop: space(8), paddingBottom: space(5), gap: space(1) },
   back: { color: colors.goldDeep, fontSize: 16 },
-  headerTitle: { fontFamily: fonts.display, fontSize: 24, color: colors.ink, fontWeight: '700' },
-  h1: { fontFamily: fonts.display, fontSize: 30, fontWeight: '700', color: colors.ink, marginBottom: space(2) },
-  h2: { fontFamily: fonts.display, fontSize: 19, fontWeight: '700', color: colors.ink, marginBottom: space(2) },
+  headerTitle: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    color: colors.ink,
+    fontWeight: "700",
+  },
+  h1: {
+    fontFamily: fonts.display,
+    fontSize: 30,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: space(2),
+  },
+  h2: {
+    fontFamily: fonts.display,
+    fontSize: 19,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: space(2),
+  },
   p: { fontSize: 15, lineHeight: 22, color: colors.ink },
-  card: { backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.line, padding: space(4), marginBottom: space(3) },
-  btn: { minHeight: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(5), marginBottom: space(2) },
-  btn_primary: { backgroundColor: colors.red },
-  btn_danger: { backgroundColor: '#8E1F18' },
-  btn_secondary: { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line },
-  btn_ghost: { backgroundColor: 'transparent' },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: space(1) },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(3), fontSize: 16, color: colors.ink },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: space(4),
+    marginBottom: space(3),
+  },
+  btn: {
+    minHeight: 50,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space(5),
+    marginBottom: space(2),
+  },
+  btn_primary: { backgroundColor: "#E8D5E9" },
+  btn_danger: { backgroundColor: "#8E1F18" },
+  btn_secondary: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  btn_ghost: { backgroundColor: "transparent" },
+  btnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.muted,
+    marginBottom: space(1),
+  },
+  input: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: space(3),
+    paddingVertical: space(3),
+    fontSize: 16,
+    color: colors.ink,
+  },
   error: { color: colors.red, fontSize: 14, marginTop: space(1) },
-  checkRow: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', marginBottom: space(3) },
-  box: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkRow: {
+    flexDirection: "row",
+    gap: space(3),
+    alignItems: "flex-start",
+    marginBottom: space(3),
+  },
+  box: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
   boxOn: { backgroundColor: colors.red, borderColor: colors.red },
-  chip: { paddingHorizontal: space(4), paddingVertical: space(2), borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: '#fff', marginRight: space(2), marginBottom: space(2) },
-  chipText: { fontSize: 14, color: colors.ink, fontWeight: '500' },
-  note: { backgroundColor: colors.redSoft, borderRadius: 10, padding: space(3), marginVertical: space(3) },
-  noteText: { fontSize: 13, color: '#7A2A22', lineHeight: 18 },
+  chip: {
+    paddingHorizontal: space(4),
+    paddingVertical: space(2),
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.card,
+    marginRight: space(2),
+    marginBottom: space(2),
+  },
+  chipText: { fontSize: 14, color: colors.ink, fontWeight: "500" },
+  note: {
+    backgroundColor: colors.redSoft,
+    borderRadius: 10,
+    padding: space(3),
+    marginVertical: space(3),
+  },
+  noteText: { fontSize: 13, color: colors.muted, lineHeight: 18 },
 });

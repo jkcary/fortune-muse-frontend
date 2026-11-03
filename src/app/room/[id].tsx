@@ -78,7 +78,7 @@ export default function Room() {
               <Pressable onLongPress={() => !mine && setTarget(item)} accessibilityHint={mine ? undefined : t('Long press to report or block')}
                 style={[s.bubble, mine ? s.mine : s.theirs]}>
                 {!mine && <Text style={s.who}>{item.handle ?? t('Someone')}</Text>}
-                <Text style={{ color: mine ? '#fff' : colors.ink, fontSize: 15 }}>{item.text}</Text>
+                <Text style={{ color: mine ? '#171A20' : colors.ink, fontSize: 15 }}>{item.text}</Text>
                 {!mine && <Pressable onPress={() => setTarget(item)} hitSlop={8}><Text style={s.more}>•••</Text></Pressable>}
               </Pressable>
             );
@@ -106,7 +106,7 @@ export default function Room() {
         <View style={s.composer}>
           <TextInput value={text} onChangeText={setText} placeholder={t('Message (no links or contact info)')} placeholderTextColor="#B0A390"
             style={s.input} maxLength={500} onSubmitEditing={send} returnKeyType="send" accessibilityLabel={t('Message')} />
-          <Pressable onPress={send} style={s.send} accessibilityRole="button" accessibilityLabel={t('Send')}><Text style={{ color: '#fff', fontWeight: '700' }}>{t('Send')}</Text></Pressable>
+          <Pressable onPress={send} style={s.send} accessibilityRole="button" accessibilityLabel={t('Send')}><Text style={{ color: '#171A20', fontWeight: '700' }}>{t('Send')}</Text></Pressable>
         </View>
         <Button kind="ghost" title={t('Leave room')} onPress={async () => { await api(`/rooms/${id}/leave`, { body: {} }); router.replace('/home'); }} />
       </KeyboardAvoidingView>
@@ -118,11 +118,11 @@ const s = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: colors.ink, marginTop: space(1) },
   bubble: { maxWidth: '80%', borderRadius: radius, padding: space(3), marginVertical: space(1) },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.red },
-  theirs: { alignSelf: 'flex-start', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line },
+  theirs: { alignSelf: 'flex-start', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
   who: { fontSize: 11, fontWeight: '700', color: colors.goldDeep, marginBottom: 2 },
   more: { color: colors.muted, fontSize: 12, alignSelf: 'flex-end' },
   composer: { flexDirection: 'row', gap: space(2), paddingVertical: space(2) },
-  input: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(3), fontSize: 15, color: colors.ink },
+  input: { flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(3), fontSize: 15, color: colors.ink },
   send: { backgroundColor: colors.red, borderRadius: 999, paddingHorizontal: space(5), justifyContent: 'center' },
-  reason: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: '#fff' },
+  reason: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: colors.card },
 });

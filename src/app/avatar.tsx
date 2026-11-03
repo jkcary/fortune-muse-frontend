@@ -1,15 +1,30 @@
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { Avatar } from '@/components/Avatar';
-import { Button, Chip, ErrorText, H2, Loading, P, Screen } from '@/components/ui';
-import { api, type AvatarData, type Mood } from '@/lib/api';
-import { useT } from '@/lib/i18n';
-import { useSession } from '@/lib/session';
-import { space } from '@/lib/theme';
-import { useAuthed } from '@/lib/useAuthed';
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+import { Avatar } from "@/components/Avatar";
+import {
+  Button,
+  Chip,
+  ErrorText,
+  H2,
+  Loading,
+  P,
+  Screen,
+} from "@/components/ui";
+import { api, type AvatarData, type Mood } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { useSession } from "@/lib/session";
+import { space } from "@/lib/theme";
+import { useAuthed } from "@/lib/useAuthed";
 
-interface Options { base: string[]; palette: string[]; accessory: string[]; background: string[]; moods: Mood[]; unlockable: { accessory: string[]; background: string[] } }
-const nice = (s: string) => s.replace(/^bg-/, '').replace(/-/g, ' ');
+interface Options {
+  base: string[];
+  palette: string[];
+  accessory: string[];
+  background: string[];
+  moods: Mood[];
+  unlockable: { accessory: string[]; background: string[] };
+}
+const nice = (s: string) => s.replace(/^bg-/, "").replace(/-/g, " ");
 
 export default function AvatarEditor() {
   const me = useAuthed();
@@ -17,45 +32,153 @@ export default function AvatarEditor() {
   const t = useT();
   const [opts, setOpts] = useState<Options | null>(null);
   const [draft, setDraft] = useState<AvatarData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { api('/avatar/options').then(setOpts); }, []);
-  useEffect(() => { if (me && !draft) setDraft(me.avatar); }, [me, draft]);
-  if (!me || !opts || !draft) return <Screen back><Loading /></Screen>;
+  const userId = me?.id;
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+    void api<Options>("/avatar/options", { signal: controller.signal })
+      .then((options) => {
+        if (active) setOpts(options);
+      })
+      .catch((error) => {
+        if (active) setLoadError(error.message);
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [userId, attempt]);
+  useEffect(() => {
+    if (me && !draft) setDraft(me.avatar);
+  }, [me, draft]);
+  if (!me || !draft)
+    return (
+      <Screen back>
+        <Loading />
+      </Screen>
+    );
+  if (loading || loadError || !opts)
+    return (
+      <Screen back title={t("Your avatar")}>
+        <View style={{ alignItems: "center", marginVertical: space(4) }}>
+          <Avatar avatar={draft} size={160} />
+        </View>
+        {loading ? (
+          <Loading />
+        ) : (
+          <>
+            <P muted>
+              {t(
+                "We couldn’t load your avatar options. Your current avatar hasn’t changed.",
+              )}
+            </P>
+            <ErrorText>{loadError}</ErrorText>
+            <Button
+              title={t("Try again")}
+              onPress={() => setAttempt((value) => value + 1)}
+            />
+          </>
+        )}
+      </Screen>
+    );
 
   const owned = new Set(me.inventory.map((i) => i.asset));
-  const accessories = [...opts.accessory, ...opts.unlockable.accessory.filter((a) => owned.has(a))];
-  const backgrounds = [...opts.background, ...opts.unlockable.background.filter((b) => owned.has(b))];
-  const set = (patch: Partial<AvatarData['customization']>) => setDraft({ ...draft, customization: { ...draft.customization, ...patch } });
+  const accessories = [
+    ...opts.accessory,
+    ...opts.unlockable.accessory.filter((a) => owned.has(a)),
+  ];
+  const backgrounds = [
+    ...opts.background,
+    ...opts.unlockable.background.filter((b) => owned.has(b)),
+  ];
+  const set = (patch: Partial<AvatarData["customization"]>) =>
+    setDraft({ ...draft, customization: { ...draft.customization, ...patch } });
 
-  const group = (title: string, items: string[], current: string, onPick: (v: string) => void) => (
+  const group = (
+    title: string,
+    items: string[],
+    current: string,
+    onPick: (v: string) => void,
+  ) => (
     <View style={{ marginBottom: space(3) }}>
       <H2>{t(title)}</H2>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {items.map((x) => <Chip key={x} label={t(nice(x))} selected={current === x} onPress={() => onPick(x)} />)}
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+        {items.map((x) => (
+          <Chip
+            key={x}
+            label={t(nice(x))}
+            selected={current === x}
+            onPress={() => onPick(x)}
+          />
+        ))}
       </View>
     </View>
   );
 
   return (
-    <Screen back title={t('Your avatar')}>
-      <View style={{ alignItems: 'center', marginVertical: space(4) }}><Avatar avatar={draft} size={160} /></View>
-      <P muted style={{ textAlign: 'center', marginBottom: space(4) }}>{t('Your avatar’s face follows the mood you share after a reading. Win extra items from the daily draw.')}</P>
-      {group('Character', opts.base, draft.baseId, (v) => setDraft({ ...draft, baseId: v }))}
-      {group('Colors', opts.palette, draft.customization.palette, (v) => set({ palette: v }))}
-      {group('Accessory', accessories, draft.customization.accessory, (v) => set({ accessory: v }))}
-      {group('Background', backgrounds, draft.customization.background, (v) => set({ background: v }))}
-      {group('Mood', opts.moods, draft.mood, (v) => setDraft({ ...draft, mood: v as Mood }))}
+    <Screen back title={t("Your avatar")}>
+      <View style={{ alignItems: "center", marginVertical: space(4) }}>
+        <Avatar avatar={draft} size={160} />
+      </View>
+      <P muted style={{ textAlign: "center", marginBottom: space(4) }}>
+        {t(
+          "Your avatar’s face follows the mood you share after a reading. Win extra items from the daily draw.",
+        )}
+      </P>
+      {group("Character", opts.base, draft.baseId, (v) =>
+        setDraft({ ...draft, baseId: v }),
+      )}
+      {group("Colors", opts.palette, draft.customization.palette, (v) =>
+        set({ palette: v }),
+      )}
+      {group("Accessory", accessories, draft.customization.accessory, (v) =>
+        set({ accessory: v }),
+      )}
+      {group("Background", backgrounds, draft.customization.background, (v) =>
+        set({ background: v }),
+      )}
+      {group("Mood", opts.moods, draft.mood, (v) =>
+        setDraft({ ...draft, mood: v as Mood }),
+      )}
       <ErrorText>{err}</ErrorText>
-      <Button title={t('Save avatar')} loading={busy} onPress={async () => {
-        setBusy(true);
-        try {
-          await api('/me/avatar', { method: 'PATCH', body: { baseId: draft.baseId, ...draft.customization, mood: draft.mood } });
-          await refresh();
-          setErr(null);
-        } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
-      }} />
+      <Button
+        title={t("Save avatar")}
+        loading={busy}
+        onPress={async () => {
+          setBusy(true);
+          try {
+            await api("/me/avatar", {
+              method: "PATCH",
+              body: {
+                baseId: draft.baseId,
+                ...draft.customization,
+                mood: draft.mood,
+              },
+            });
+            await refresh();
+            setErr(null);
+          } catch (e: any) {
+            setErr(e.message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
     </Screen>
   );
 }
