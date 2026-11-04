@@ -7,6 +7,7 @@ import { api, getApiToken } from "@/lib/api";
 import { isLang, LanguageProvider, useI18n, type Lang } from "@/lib/i18n";
 import { SessionProvider, useSession } from "@/lib/session";
 import { colors } from "@/lib/theme";
+import { GardenProvider } from "@/lib/garden";
 
 // A signed-in user's choice is saved to their account so it follows them to other devices.
 const saveLanguage = (language: Lang) => {
@@ -32,6 +33,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <LanguageProvider onChange={saveLanguage}>
         <SessionProvider>
+          <GardenProvider>
           <LanguageSync />
           <Head>
             <title>ORACLE ONE · I Ching readings for love & money</title>
@@ -47,6 +49,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: colors.bg },
             }}
           />
+          </GardenProvider>
         </SessionProvider>
       </LanguageProvider>
     </SafeAreaProvider>

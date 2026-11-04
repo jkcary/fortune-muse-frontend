@@ -1,280 +1,352 @@
-import { LocalizedText as Text } from "@/components/LocalizedText";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { LocalizedText as Text } from "./LocalizedText";
 import { OracleArt } from "./PearlOracleArt";
 import { Copy, Display, Eyebrow, OracleShell } from "./OracleShell";
-import { Button } from "./ui";
-import { latestCast, pendingCast } from "@/lib/oracle";
+import { OracleGuidePortrait } from "./OracleGuidePortrait";
+import { OracleStorySky } from "./OracleStorySky";
+import { OracleReturnHome } from "./OracleReturnHome";
+import { GardenInvitation } from "./GardenInvitation";
+import { OracleGlowButton } from "./OracleGlowButton";
+import { isKeptStory, isSavedReading, mergeStory } from "@/lib/storyReturn";
+import type { OracleReturnPreferences } from "@/lib/oracle-contract";
+import { Button, ErrorText } from "./ui";
+import { latestCast, oracle, pendingCast, type OracleCast } from "@/lib/oracle";
 import { useSession } from "@/lib/session";
 import { colors, fonts } from "@/lib/theme";
-import { useT } from "@/lib/i18n";
 
 export default function Explore() {
-  const t = useT();
   const { width } = useWindowDimensions();
   const mobile = width < 760;
   const { me } = useSession();
-  const [recent, setRecent] = useState<string | null>(null);
-  useEffect(() => {
-    void latestCast.get().then(setRecent);
-    if (me)
-      void pendingCast.get().then((id) => {
-        if (id) {
-          void pendingCast.set(null);
-          router.replace("/oracle/" + id);
+  const [recent, setRecent] = useState<OracleCast | null>(null);
+  const [casts, setCasts] = useState<OracleCast[]>([]);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState<{
+    id: string;
+    chapter: string;
+  } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setCasts([]);
+      setOwnerId(null);
+      setRecent(null);
+      setCurrentId(null);
+      setHighlight(null);
+      setError("");
+      void (async () => {
+        if (me) {
+          const pending = await pendingCast.get();
+          if (!active) return;
+          if (pending) {
+            await pendingCast.set(null);
+            if (active) router.replace(`/oracle/${pending}`);
+            return;
+          }
+          try {
+            const result = await oracle<{
+              casts: OracleCast[];
+              returnPreferences?: OracleReturnPreferences;
+            }>("/oracle/journal");
+            if (active) {
+              setCasts(result.casts);
+              setOwnerId(me.id);
+              setCurrentId(result.returnPreferences?.currentCastId ?? null);
+            }
+          } catch {
+            if (active)
+              setError(
+                "Your stories could not load. Try again when you’re ready.",
+              );
+          }
+        } else {
+          const id = await latestCast.get();
+          if (!id || !active) return;
+          try {
+            const result = await oracle<{ cast: OracleCast }>(
+              `/oracle/casts/${id}`,
+            );
+            if (active && !result.cast.privateMode) setRecent(result.cast);
+          } catch {
+            /* Expired guest stories are not return invitations. */
+          }
         }
-      });
-  }, [me]);
+      })();
+      return () => {
+        active = false;
+      };
+    }, [me?.id, reload]),
+  );
+  const visibleCasts = ownerId === me?.id ? casts : [];
+  const hasStory = visibleCasts.some((c) => isSavedReading(c));
+  const hasConstellation = visibleCasts.some((c) => isKeptStory(c));
+  function updateStory(next: OracleCast) {
+    setCasts((previous) =>
+      previous.map((c) => (c.id === next.id ? mergeStory(c, next) : c)),
+    );
+    const chapter = next.journey?.updates.at(-1)?.id;
+    if (chapter) setHighlight({ id: next.id, chapter });
+  }
   return (
     <OracleShell>
-      <View
-        style={[
-          s.hero,
-          {
-            flexDirection: mobile ? "column" : "row",
-            paddingTop: mobile ? 34 : 44,
-            paddingBottom: mobile ? 28 : 42,
-          },
-        ]}
-      >
-        <View style={{ flex: 1, zIndex: 1, paddingTop: mobile ? 0 : 20 }}>
-          <Eyebrow>A LITTLE MYSTERY. A LITTLE MORE YOU.</Eyebrow>
-          <Display size={mobile ? 48 : 76}>
-            Your universe.{"\n"}Your{" "}
-            <Text style={{ fontStyle: "italic", color: "#E2C4EE" }}>
-              becoming.
-            </Text>
-          </Display>
-          <Text style={[s.intro, { maxWidth: 420, marginTop: 26 }]}>
-            A cosmic moment for love, ambition, and everything unfolding.
-          </Text>
+      {me && hasStory && (
+        <>
           <View
             style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 14,
-              marginTop: 30,
+              flexDirection: width >= 900 ? "row" : "column",
+              alignItems: "flex-start",
+              gap: 12,
+              marginTop: 20,
             }}
           >
-            <Button
-              title="Begin your reading  ↗"
-              onPress={() => router.push("/ask")}
-              style={{ borderRadius: 2099, paddingHorizontal: 26 }}
-            />
-            <Button
-              title="Explore the method"
-              kind="ghost"
-              onPress={() => router.push("/method")}
-              style={{ paddingHorizontal: 10 }}
-            />
-          </View>
-          <Text style={s.micro}>FREE TO BEGIN / NO ACCOUNT NEEDED</Text>
-        </View>
-        <View
-          style={{
-            width: mobile ? "100%" : 450,
-            alignItems: "center",
-            justifyContent: "center",
-            marginTop: mobile ? 10 : -20,
-            marginBottom: mobile ? -16 : 0,
-          }}
-        >
-          <OracleArt size={mobile ? Math.min(width - 44, 360) : 480} />
-          <Text style={[s.orbitLabel, { bottom: mobile ? 8 : 26 }]}>
-            THREE COINS. SIX LINES. ONE MOMENT.
-          </Text>
-        </View>
-      </View>
-      <View style={s.rule}>
-        <Text style={s.strip}>ROOTED IN THE I CHING</Text>
-        <Text style={s.strip}>64 HEXAGRAMS</Text>
-        <Text style={s.strip}>YOUR QUESTION. YOUR PERSPECTIVE.</Text>
-      </View>
-      <View
-        style={{
-          paddingTop: 44,
-          paddingBottom: 24,
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: 16,
-        }}
-      >
-        <View>
-          <Eyebrow>CHOOSE YOUR PATH</Eyebrow>
-          <Text style={s.sectionTitle}>What’s on your mind?</Text>
-        </View>
-        {!mobile && (
-          <Text style={s.aside}>A little mystery. A clearer next step.</Text>
-        )}
-      </View>
-      <View style={{ flexDirection: mobile ? "column" : "row", gap: 20 }}>
-        {(
-          [
-            {
-              topic: "wealth",
-              title: "Wealth & Career",
-              subtitle: "Make room for possibility.",
-              description:
-                "Explore work, ambition, resources, and your next meaningful move.",
-              label: "Explore wealth",
-              number: "01",
-            },
-            {
-              topic: "love",
-              title: "Love & Connection",
-              subtitle: "Understand what connects you.",
-              description:
-                "Reflect on relationships, communication, and matters of the heart.",
-              label: "Explore love",
-              number: "02",
-            },
-          ] as const
-        ).map((item) => (
-          <Pressable
-            key={item.topic}
-            accessibilityRole="link"
-            accessibilityLabel={t(item.title)}
-            onPress={() =>
-              router.push({ pathname: "/ask", params: { topic: item.topic } })
-            }
-            style={({ pressed }) => [
-              s.portal,
-              {
-                minHeight: mobile ? 330 : 370,
-                flex: mobile ? undefined : 1,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
             <View
-              style={{
-                position: "absolute",
-                right: mobile ? -22 : -10,
-                top: mobile ? -24 : -8,
-                opacity: 0.72,
-              }}
+              style={
+                width >= 900 && hasConstellation
+                  ? { flex: 1, minWidth: 0 }
+                  : { width: "100%" }
+              }
             >
-              <OracleArt
-                love={item.topic === "love"}
-                size={mobile ? 255 : 290}
-                animate={false}
+              <OracleReturnHome
+                key={me.id}
+                casts={visibleCasts}
+                currentId={currentId}
+                onPreference={setCurrentId}
+                onUpdated={updateStory}
               />
             </View>
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
-            >
-              <Text
-                style={[
-                  s.pathLabel,
-                  item.topic === "love" && { color: colors.love },
-                ]}
+            {hasConstellation && (
+              <View
+                style={
+                  width >= 900 ? { flex: 1, minWidth: 0 } : { width: "100%" }
+                }
               >
-                {item.topic === "love"
-                  ? "THE CONNECTION PORTAL"
-                  : "THE ABUNDANCE PORTAL"}
+                <OracleStorySky
+                  compact
+                  casts={visibleCasts}
+                  highlightedId={highlight?.id}
+                  highlightKey={highlight?.chapter}
+                />
+              </View>
+            )}
+          </View>
+          <View style={{ gap: 10, paddingVertical: 18 }}>
+            <Eyebrow>A NEW POSSIBILITY</Eyebrow>
+            <Copy muted>Have something else on your mind?</Copy>
+            <OracleGlowButton
+              title="Explore a new question"
+              onPress={() => router.push("/ask")}
+            />
+          </View>
+        </>
+      )}
+      {!!error && (
+        <View style={{ paddingTop: 20 }}>
+          <ErrorText>{error}</ErrorText>
+          <Button
+            title="Try loading my stories again"
+            kind="ghost"
+            onPress={() => setReload((n) => n + 1)}
+          />
+        </View>
+      )}
+      {!hasStory && (
+        <View
+          style={[
+            s.hero,
+            {
+              flexDirection: mobile ? "column" : "row",
+              paddingTop: mobile ? 30 : 50,
+            },
+          ]}
+        >
+          <View style={{ flex: 1, zIndex: 1, gap: 18 }}>
+            <Eyebrow>A SMALL RITUAL. A NEW POSSIBILITY.</Eyebrow>
+            <Display size={mobile ? 47 : 72}>
+              Which way{"\n"}
+              <Text style={{ fontStyle: "italic", color: "#E2C4EE" }}>
+                feels like you?
               </Text>
-              <Text style={s.pathNumber}>{item.number}</Text>
+            </Display>
+            <Copy muted>
+              Bring a choice, a feeling, or a little curiosity. Find a fresh
+              perspective, explore two paths, and take one small step.
+            </Copy>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <Button
+                title="Meet my possibilities ↗"
+                onPress={() => router.push("/ask")}
+                style={{ borderRadius: 999, paddingHorizontal: 25 }}
+              />
+              <Text style={s.micro}>FREE TO EXPLORE · NO ACCOUNT NEEDED</Text>
             </View>
-            <View style={{ flex: 1, minHeight: 100 }} />
-            <Text style={s.portalTitle}>{item.title}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                paddingTop: 8,
+              }}
+            >
+              <OracleGuidePortrait size={42} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: colors.gold, fontSize: 12 }}>
+                  Meet Selene
+                </Text>
+                <Text style={s.small}>
+                  Your AI guide for the question that’s yours.
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            style={{
+              width: mobile ? "100%" : 420,
+              alignItems: "center",
+              marginTop: mobile ? 12 : -10,
+              height: mobile ? 230 : 405,
+            }}
+          >
+            <OracleArt size={mobile ? 250 : 430} />
             <Text
               style={[
-                s.portalSub,
-                item.topic === "love" && { color: colors.love },
+                s.micro,
+                { position: "absolute", bottom: mobile ? 0 : 5 },
               ]}
             >
-              {item.subtitle}
+              THREE COINS. TWO PATHS. YOUR NEXT CHAPTER.
             </Text>
-            <Text style={s.portalDescription}>{item.description}</Text>
+          </View>
+        </View>
+      )}
+      <GardenInvitation/>
+      <View style={{ paddingTop: 34, paddingBottom: 20, gap: 10 }}>
+        <Eyebrow>START WHERE YOU ARE</Eyebrow>
+        <Text style={s.title}>What’s taking up space in your mind?</Text>
+      </View>
+      <View style={{ flexDirection: mobile ? "column" : "row", gap: 14 }}>
+        {(
+          [
+            [
+              "wealth",
+              "01",
+              "A choice at work",
+              "Two opportunities. A new direction. A question about what comes next.",
+              "Find my next step ↗",
+            ],
+            [
+              "love",
+              "02",
+              "Someone on my mind",
+              "A conversation to have. A connection to understand. Space for your own needs.",
+              "Explore my connection ↗",
+            ],
+            [
+              "wealth",
+              "03",
+              "A little curiosity",
+              "You don’t need a big dilemma. Explore one small change for the week ahead.",
+              "See what opens up ↗",
+            ],
+          ] as const
+        ).map(([topic, n, title, copy, label]) => (
+          <Pressable
+            key={n}
+            accessibilityRole="link"
+            onPress={() =>
+              router.push({
+                pathname: "/ask",
+                params: {
+                  topic,
+                  ...(n === "03" ? { starter: "curiosity" } : {}),
+                },
+              })
+            }
+            style={({ pressed }) => [
+              s.path,
+              { opacity: pressed ? 0.8 : 1, flex: mobile ? undefined : 1 },
+            ]}
+          >
             <Text
-              style={[
-                s.portalLink,
-                item.topic === "love" && { color: colors.love },
-              ]}
+              style={{
+                color: n === "02" ? colors.love : colors.gold,
+                fontSize: 11,
+                letterSpacing: 2,
+              }}
             >
-              {item.label} ↗
+              {n} /
+            </Text>
+            <Text style={s.pathTitle}>{title}</Text>
+            <Text style={s.description}>{copy}</Text>
+            <Text style={{ color: colors.gold, fontSize: 12, marginTop: 13 }}>
+              {label}
             </Text>
           </Pressable>
         ))}
       </View>
       {recent && (
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => router.push("/oracle/" + recent)}
-          style={s.resume}
-        >
-          <Text style={{ color: colors.muted, fontSize: 12 }}>
-            Your last question is waiting.
+        <View style={s.resume}>
+          <Text style={s.small}>
+            {recent.journey?.action
+              ? "Your small step is waiting here."
+              : "Your last question is waiting."}
           </Text>
-          <Text style={{ color: colors.gold, fontSize: 12 }}>
-            Continue your reading ↗
-          </Text>
-        </Pressable>
-      )}
-      <View style={{ paddingTop: 64, paddingBottom: 20 }}>
-        <Eyebrow>A MOMENT TO PAUSE</Eyebrow>
-        <View
-          style={{
-            flexDirection: mobile ? "column" : "row",
-            justifyContent: "space-between",
-            gap: 24,
-          }}
-        >
-          <Text
-            style={[
-              s.sectionTitle,
-              { maxWidth: 340, fontSize: mobile ? 32 : 38 },
-            ]}
-          >
-            An old ritual.{"\n"}A fresh way to see.
-          </Text>
-          <Text style={[s.intro, { maxWidth: 420 }]}>
-            You bring the question. The coins offer a symbolic starting point.
-            Discover an interpretation that leaves room for your own judgment.
-          </Text>
+          <Button
+            title="Continue my story ↗"
+            kind="ghost"
+            onPress={() =>
+              router.push((recent.basis ? "/oracle/" : "/cast/") + recent.id)
+            }
+          />
         </View>
-        <View
-          style={{
-            flexDirection: mobile ? "column" : "row",
-            gap: 30,
-            marginTop: 32,
-          }}
-        >
+      )}
+      <View style={{ paddingTop: 48, gap: 25 }}>
+        <Eyebrow>A LITTLE MYSTERY. SOMETHING YOU CAN USE.</Eyebrow>
+        <View style={{ flexDirection: mobile ? "column" : "row", gap: 26 }}>
           {[
             [
               "01",
-              "Ask a question",
-              "Choose love or wealth. Share as much or as little context as you like.",
+              "A question, in your words",
+              "Talk it through with Selene. Review your words before the coins.",
             ],
             [
               "02",
-              "Cast your coins",
-              "Build your hexagram, one line at a time. See exactly how it is formed.",
+              "Two doors to open",
+              "See a fresh angle on your actual question. Explore possibilities at your own pace.",
             ],
             [
               "03",
-              "Find your perspective",
-              "Read the symbolism. Explore a personal interpretation. Take one thoughtful step.",
+              "A story to come back to",
+              "Keep a small step. Return with what happened, and see your story take shape.",
             ],
           ].map(([n, title, copy]) => (
             <View
               key={n}
               style={{
                 flex: 1,
+                gap: 12,
                 borderTopWidth: 1,
                 borderColor: colors.line,
-                paddingTop: 22,
-                gap: 12,
+                paddingTop: 20,
               }}
             >
-              <Text style={s.pathLabel}>{n} /</Text>
+              <Text style={s.micro}>{n} /</Text>
               <Text
                 style={{
                   color: colors.ink,
-                  fontSize: 17,
                   fontFamily: fonts.display,
+                  fontSize: 23,
                 }}
               >
                 {title}
@@ -284,97 +356,57 @@ export default function Explore() {
           ))}
         </View>
       </View>
-      <View style={s.closing}>
-        <Text
-          style={{
-            fontFamily: fonts.display,
-            fontSize: mobile ? 25 : 34,
-            color: colors.ink,
-            fontStyle: "italic",
-            textAlign: "center",
-          }}
-        >
-          Discover your patterns. Explore your possibilities.
+      <View style={{ paddingVertical: 42, gap: 12, alignItems: "center" }}>
+        <Text style={s.small}>
+          Rooted in the I Ching. Made for your own judgment.
         </Text>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => router.push("/sample")}
-        >
-          <Text style={{ color: colors.gold, fontSize: 12, marginTop: 20 }}>
-            See a sample reading ↗
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+          <Button
+            title="Explore the method"
+            kind="ghost"
+            onPress={() => router.push("/method")}
+          />
+          <Button
+            title="See a sample reading ↗"
+            kind="ghost"
+            onPress={() => router.push("/sample")}
+          />
+        </View>
       </View>
     </OracleShell>
   );
 }
 const s = StyleSheet.create({
-  hero: { alignItems: "center" },
-  intro: { color: colors.muted, fontSize: 15, lineHeight: 27 },
-  micro: { color: "#C6B4D0", fontSize: 10, letterSpacing: 1.4, marginTop: 12 },
-  orbitLabel: {
-    position: "absolute",
-    color: colors.gold,
-    fontSize: 10,
-    letterSpacing: 2,
-  },
-  rule: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.line,
-    paddingVertical: 19,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 14,
-  },
-  strip: { color: "#C6B4D0", fontSize: 10, letterSpacing: 1.9 },
-  sectionTitle: {
-    color: colors.ink,
+  hero: { alignItems: "center", gap: 18 },
+  micro: { color: "#C6B4D0", fontSize: 9, letterSpacing: 1.2, lineHeight: 18 },
+  small: { color: colors.muted, fontSize: 12, lineHeight: 21 },
+  title: {
     fontFamily: fonts.display,
-    fontSize: 32,
-    fontWeight: "400",
-    letterSpacing: -0.5,
+    color: colors.ink,
+    fontSize: 31,
+    lineHeight: 39,
   },
-  aside: { color: colors.muted, fontSize: 12, paddingBottom: 5 },
-  portal: {
-    backgroundColor: "#261B32",
+  path: {
+    backgroundColor: "#281D34",
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 20,
-    padding: 26,
-    overflow: "hidden",
+    borderRadius: 22,
+    padding: 24,
+    gap: 14,
   },
-  pathLabel: { fontSize: 10, letterSpacing: 2, color: colors.gold },
-  pathNumber: { fontSize: 10, color: "#747B88" },
-  portalTitle: {
+  pathTitle: {
     fontFamily: fonts.display,
-    fontSize: 30,
     color: colors.ink,
-    letterSpacing: -0.5,
+    fontSize: 27,
+    lineHeight: 33,
   },
-  portalSub: { fontSize: 12, color: colors.gold, marginTop: 10 },
-  portalDescription: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 23,
-    maxWidth: 300,
-    marginTop: 10,
-  },
-  portalLink: {
-    color: colors.gold,
-    fontSize: 11,
-    marginTop: 26,
-    letterSpacing: 0.3,
-  },
+  description: { color: colors.muted, fontSize: 13, lineHeight: 23, flex: 1 },
   resume: {
-    paddingVertical: 20,
+    paddingTop: 20,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
-    borderBottomWidth: 1,
-    borderColor: colors.line,
+    alignItems: "center",
+    gap: 10,
   },
-  closing: { alignItems: "center", paddingTop: 58, paddingBottom: 14 },
 });

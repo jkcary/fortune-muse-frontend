@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Animated,
   Easing,
@@ -34,6 +40,8 @@ type Props = {
   waiting: boolean;
   onSave: () => Promise<void>;
   onSignIn: () => Promise<void>;
+  reflectionForm?: (dismiss: () => void) => ReactNode;
+  reflectionBusy?: boolean;
 };
 
 export function OracleClosingRitual(props: Props) {
@@ -82,9 +90,9 @@ export function OracleClosingRitual(props: Props) {
           <ClosingExperience
             {...props}
             reducedByDevice={reduced}
-            onClose={() => {
+            onClose={(sealed) => {
               setOpen(false);
-              setCompleted(true);
+              if (sealed) setCompleted(true);
             }}
           />
         )}
@@ -100,13 +108,17 @@ function ClosingExperience({
   signedIn,
   onSave,
   onSignIn,
+  reflectionForm,
+  reflectionBusy = false,
   reducedByDevice,
   onClose,
-}: Props & { reducedByDevice: boolean; onClose: () => void }) {
+}: Props & { reducedByDevice: boolean; onClose: (sealed: boolean) => void }) {
   const { lang, t } = useI18n();
   const { width, height } = useWindowDimensions();
   const compact = width < 760;
-  const [phase, setPhase] = useState<"ritual" | "keepsake">("ritual");
+  const [phase, setPhase] = useState<"journal" | "ritual" | "keepsake">(
+    reflectionForm ? "journal" : "ritual",
+  );
   const [lessMotion, setLessMotion] = useState(false);
   const [thought, setThought] = useState(false);
   const [personalQuote, setPersonalQuote] = useState(false);
@@ -178,7 +190,7 @@ function ClosingExperience({
   }, []);
   const dismiss = () => {
     speech.stop();
-    onClose();
+    onClose(phase === "keepsake");
   };
   const options = { closing: true, includePersonalQuote: personalQuote };
   const svg = oracleCardSvg(cast, options);
@@ -269,7 +281,39 @@ function ClosingExperience({
         }}
         keyboardShouldPersistTaps="handled"
       >
-        {phase === "ritual" ? (
+        {phase === "journal" ? (
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 740,
+              alignSelf: "center",
+              gap: 20,
+              paddingVertical: compact ? 10 : 24,
+            }}
+          >
+            <Text
+              accessibilityRole="header"
+              style={[
+                styles.title,
+                { fontSize: compact ? 30 : 40, textAlign: "center" },
+              ]}
+            >
+              Before you seal this reading.
+            </Text>
+            <Copy muted>
+              You can save a reflection, or continue without saving.
+            </Copy>
+            {reflectionForm?.(dismiss)}
+            <Button
+              title="Continue to seal"
+              disabled={reflectionBusy}
+              onPress={() => {
+                progress.setValue(reduced ? 1 : 0);
+                setPhase("ritual");
+              }}
+            />
+          </View>
+        ) : phase === "ritual" ? (
           <View
             style={{
               flex: 1,
@@ -328,12 +372,48 @@ function ClosingExperience({
               >
                 The next step is yours.
               </Text>
+            </View>
+            <View
+              style={{
+                flexDirection: "column",
+                gap: 30,
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  width: compact ? Math.min(width - 48, 330) : 360,
+                  shadowColor: "#C499E6",
+                  shadowOpacity: 0.3,
+                  shadowRadius: 30,
+                  shadowOffset: { width: 0, height: 0 },
+                  gap: 12,
+                }}
+              >
+                <View
+                  accessibilityRole="image"
+                  accessibilityLabel={t("Your closing card preview")}
+                  style={{
+                    borderRadius: 24,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: colors.line,
+                    aspectRatio: 9 / 16,
+                  }}
+                >
+                  <OracleCardPreview xml={svg} />
+                </View>
+                <Text style={[styles.small, { textAlign: "center" }]}>
+                  A keepsake of this reading, in your own time.
+                </Text>
+              </View>
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 16,
                   maxWidth: 570,
+                  width: "100%",
                 }}
               >
                 <Animated.View
@@ -384,41 +464,10 @@ function ClosingExperience({
                   Voice playback is unavailable. Your subtitles are still here.
                 </Text>
               )}
-            </View>
-            <View
-              style={{
-                flexDirection: compact ? "column" : "row",
-                gap: 30,
-                alignItems: compact ? "center" : "flex-start",
-              }}
-            >
               <View
                 style={{
-                  width: compact ? Math.min(width - 48, 330) : 310,
-                  gap: 12,
-                }}
-              >
-                <View
-                  accessibilityRole="image"
-                  accessibilityLabel={t("Your closing card preview")}
-                  style={{
-                    borderRadius: 24,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: colors.line,
-                    aspectRatio: 9 / 16,
-                  }}
-                >
-                  <OracleCardPreview xml={svg} />
-                </View>
-                <Text style={[styles.small, { textAlign: "center" }]}>
-                  A keepsake of this reading, in your own time.
-                </Text>
-              </View>
-              <View
-                style={{
-                  flex: compact ? undefined : 1,
-                  width: compact ? "100%" : undefined,
+                  width: "100%",
+                  maxWidth: 640,
                   minWidth: 0,
                   gap: 18,
                 }}
@@ -560,6 +609,31 @@ function ClosingExperience({
                   kind="ghost"
                   onPress={dismiss}
                 />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Button
+                    title="My hexagram calendar"
+                    kind="secondary"
+                    onPress={() => {
+                      dismiss();
+                      router.push("/calendar");
+                    }}
+                  />
+                  <Button
+                    title="My hexagram collection"
+                    kind="secondary"
+                    onPress={() => {
+                      dismiss();
+                      router.push("/collection");
+                    }}
+                  />
+                </View>
                 {signedIn && !cast.privateMode && (
                   <Button
                     title="View my journal"

@@ -13,6 +13,7 @@ import {
 import { HexagramGlyph } from "@/components/OracleArt";
 import { OracleClosingRitual } from "@/components/OracleClosingRitual";
 import { OracleActionGuide } from "@/components/OracleActionGuide";
+import { OracleDiscovery } from "@/components/OracleDiscovery";
 import {
   Copy,
   Display,
@@ -22,6 +23,7 @@ import {
   oracleStyles as s,
 } from "@/components/OracleShell";
 import { Button, Check, ErrorText, Field, Loading } from "@/components/ui";
+import { OracleGenerationSky } from "@/components/OracleGenerationSky";
 import { api, money } from "@/lib/api";
 import { latestCast, oracle, pendingCast } from "@/lib/oracle";
 import Svg, { SvgXml } from "react-native-svg";
@@ -182,9 +184,9 @@ export default function Reading() {
           {cast.topic === "love" ? "LOVE & CONNECTION" : "WEALTH & CAREER"}
         </Eyebrow>
         <Display size={mobile ? 42 : 58}>
-          A different{" "}
+          Your next{" "}
           <Text style={{ fontStyle: "italic", color: colors.gold }}>
-            perspective.
+            possibility.
           </Text>
         </Display>
         <View style={{ marginTop: 20, maxWidth: 750 }}>
@@ -192,6 +194,28 @@ export default function Reading() {
             “{cast.question}”
           </Copy>
         </View>
+      </View>
+      <View style={{ paddingBottom: 38 }}>
+        <OracleDiscovery
+          key={cast.id}
+          cast={cast}
+          onUpdated={(next) =>
+            setCast((previous) =>
+              previous
+                ? previous.updatedAt &&
+                  next.updatedAt &&
+                  previous.updatedAt > next.updatedAt
+                  ? previous
+                  : {
+                      ...previous,
+                      updatedAt: next.updatedAt,
+                      glimpse: next.glimpse ?? previous.glimpse,
+                      journey: next.journey,
+                    }
+                : next,
+            )
+          }
+        />
       </View>
       <View style={{ flexDirection: mobile ? "column" : "row", gap: 30 }}>
         <View style={{ width: mobile ? "100%" : 310, gap: 18 }}>
@@ -357,7 +381,7 @@ export default function Reading() {
           ) : paidWaiting ? (
             <Panel>
               <Eyebrow>YOUR DEEP READING</Eyebrow>
-              <Loading label="Connecting your question with your hexagram…" />
+              <OracleGenerationSky status={cast.premiumStatus === "queued" ? "queued" : "generating"} bits={primary.bits}/>
               <Copy muted>
                 You can leave this page. Your reading will continue in the
                 background and appear here when ready.
@@ -583,16 +607,9 @@ export default function Reading() {
             onNote={setNote}
             signedIn={Boolean(me)}
             waiting={paidWaiting}
-            onSignIn={signIn}
-            onSave={async () => {
-              const result = await oracle("/oracle/casts/" + id, {
-                method: "PATCH",
-                body: { note, save: true },
-              });
-              setCast(result.cast);
-            }}
-          />
-          {!cast.privateMode && (
+            reflectionBusy={busy}
+            reflectionForm={!cast.privateMode ? (dismiss) => (
+              <>
             <Panel>
               <Eyebrow>YOUR ORACLE JOURNAL</Eyebrow>
               {me ? (
@@ -671,12 +688,24 @@ export default function Reading() {
                   <Button
                     title="Sign in to save your reading"
                     kind="secondary"
-                    onPress={() => void signIn()}
+                    onPress={() => { dismiss(); void signIn(); }}
                   />
                 </>
               )}
             </Panel>
-          )}
+                <ErrorText>{error}</ErrorText>
+                {!!info && <Text accessibilityLiveRegion="polite" style={{color:colors.green,fontSize:13}}>{info}</Text>}
+              </>
+            ) : undefined}
+            onSignIn={signIn}
+            onSave={async () => {
+              const result = await oracle("/oracle/casts/" + id, {
+                method: "PATCH",
+                body: { note, save: true },
+              });
+              setCast(result.cast);
+            }}
+          />
           {cast.privateMode && (
             <Text style={s.small}>
               Temporary reading. It stays out of your journal and expires after

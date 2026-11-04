@@ -11,6 +11,9 @@ import {
 import { EN_GB, KEYED, ZH } from "./strings";
 import { ZH_CHAT } from "./strings.chat";
 import { ORACLE_ZH, ORACLE_GB } from "./strings.oracle";
+import { STORY_ZH } from "./strings.story";
+import { GARDEN_ZH } from "./strings.garden";
+import { ARCHIVE_ZH } from "./strings.archive";
 import { langStore } from "./storage";
 
 export type Lang = "en-US" | "en-GB" | "zh-Hans" | "zh-Hant";
@@ -32,7 +35,7 @@ const TABLE: Record<"zh-Hans" | "zh-Hant", Map<string, string>> = {
   "zh-Hans": new Map(),
   "zh-Hant": new Map(),
 };
-for (const row of [...ZH, ...ZH_CHAT, ...ORACLE_ZH]) {
+for (const row of [...ZH, ...ZH_CHAT, ...ORACLE_ZH, ...STORY_ZH, ...GARDEN_ZH, ...ARCHIVE_ZH]) {
   TABLE["zh-Hans"].set(row[0], row[1]);
   TABLE["zh-Hant"].set(row[0], row[2]);
 }

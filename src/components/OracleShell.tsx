@@ -24,7 +24,7 @@ export function OracleShell({
   wide?: boolean;
 }) {
   const { width } = useWindowDimensions();
-  const mobile = width < 700;
+  const mobile = width < 1000;
   const { me } = useSession();
   const { lang, setLang, languageError } = useI18n();
   const path = usePathname();
@@ -43,7 +43,10 @@ export function OracleShell({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: mobile ? 24 : 32,
+        gap: mobile ? 14 : 24,
+        flexWrap: "wrap",
+        width: mobile ? "100%" : undefined,
+        rowGap: 12,
       }}
     >
       <Pressable accessibilityRole="link" onPress={() => router.push("/home")}>
@@ -64,10 +67,40 @@ export function OracleShell({
           Journal
         </Text>
       </Pressable>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push("/garden")}
+      >
+        <Text style={[s.navText, path === "/garden" && { color: colors.ink }]}>
+          Garden
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push("/calendar")}
+      >
+        <Text
+          style={[s.navText, path === "/calendar" && { color: colors.ink }]}
+        >
+          Calendar
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push("/collection")}
+      >
+        <Text
+          style={[s.navText, path === "/collection" && { color: colors.ink }]}
+        >
+          Collection
+        </Text>
+      </Pressable>
     </View>
   );
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.bg, overflow: "hidden" }}
+    >
       <CelestialBackdrop />
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}

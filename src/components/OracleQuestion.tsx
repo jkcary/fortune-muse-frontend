@@ -76,7 +76,17 @@ function EncounterIcon({
 
 function Encounter({ topic }: { topic: "wealth" | "love" }) {
   const session = useOracleEncounter(topic);
+  const params = useLocalSearchParams<{ starter?: string }>();
   const { lang, t } = useI18n();
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!seeded.current && params.starter === "curiosity") {
+      seeded.current = true;
+      session.setDraft(
+        t("What small change could make this week feel different?"),
+      );
+    }
+  }, [params.starter, t]);
   const { width } = useWindowDimensions();
   const compact = width < 760;
   const reducedByDevice = useCalmMotion();
@@ -436,8 +446,8 @@ function Encounter({ topic }: { topic: "wealth" | "love" }) {
         </SettingsDisclosure>
       )}
       <Text style={s.small}>
-        Your complete hexagram and basic reflection are free. Optional
-        personalized AI interpretation: $2.99 + applicable tax.
+        Your short personal reflection and two paths are free. Optional deep
+        reading: $2.99 + applicable tax.
       </Text>
     </View>
   );
@@ -458,7 +468,7 @@ export default function OracleQuestion() {
           accessibilityRole="header"
           style={[s.heading, { fontSize: width < 760 ? 32 : 42 }]}
         >
-          A question, held with care.
+          What feels unresolved today?
         </Text>
       </View>
       <View

@@ -8,3 +8,7 @@
 - The page reuses one player and rewinds before replay. Muting, leaving the page or backgrounding stops playback. The local sound preference defaults on and survives reloads.
 
 Run `python scripts/make-coin-sound.py` from the frontend directory to reproduce the asset. NumPy is only needed for asset generation, not at runtime.
+
+## Garden light
+
+`garden-light.wav` is an original 0.8-second C-major chime, 22.05 kHz mono 16-bit PCM, synthesized without samples. Reproduce it with `python scripts/make-garden-sound.py` (standard library only). Garden sound defaults off, has its own local preference, and plays only after a user action lights a new star or solves the puzzle. Playback stops when muted, backgrounded, or leaving the game.

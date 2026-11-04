@@ -6,16 +6,25 @@ export function useOracleCast(id: string) {
   const [cast, setCast] = useState<OracleCast | null>(null);
   const [error, setError] = useState("");
   const alive = useRef(true);
+  const currentId = useRef(id);
+  currentId.current = id;
   const reload = useCallback(async () => {
     try {
       const data = await oracle<{ cast: OracleCast }>("/oracle/casts/" + id);
-      if (alive.current) {
-        setCast(data.cast);
+      if (alive.current && currentId.current === id) {
+        setCast((previous) =>
+          previous?.id === data.cast.id &&
+          previous.updatedAt &&
+          data.cast.updatedAt &&
+          previous.updatedAt > data.cast.updatedAt
+            ? previous
+            : data.cast,
+        );
         setError("");
       }
       return data.cast;
     } catch (e: any) {
-      if (alive.current) setError(e.message);
+      if (alive.current && currentId.current === id) setError(e.message);
       return null;
     }
   }, [id]);

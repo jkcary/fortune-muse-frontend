@@ -3,6 +3,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 import { HexagramGlyph } from "@/components/OracleArt";
+import { OracleStorySky } from "@/components/OracleStorySky";
 import {
   Copy,
   Display,
@@ -53,11 +54,13 @@ export default function Journal() {
       <View style={{ paddingTop: 45, paddingBottom: 35, gap: 20 }}>
         <Eyebrow>YOUR PRIVATE COLLECTION</Eyebrow>
         <Display>Your oracle journal.</Display>
+        <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}><Button title="My hexagram calendar" kind="secondary" onPress={()=>router.push('/calendar')}/><Button title="My hexagram collection" kind="secondary" onPress={()=>router.push('/collection')}/></View>
         <Copy muted>
           A record of your questions, the patterns you notice, and the
           perspective you bring.
         </Copy>
       </View>
+      {me && casts && <OracleStorySky casts={casts} />}
       {!me ? (
         <Panel>
           <Display size={30}>Make space for your story.</Display>
@@ -223,6 +226,19 @@ export default function Journal() {
                     <Text localize={false} numberOfLines={2} style={s.small}>
                       {c.question}
                     </Text>
+                    {!!c.journey?.action && (
+                      <Text
+                        localize={false}
+                        numberOfLines={2}
+                        style={{
+                          color: colors.gold,
+                          fontSize: 12,
+                          lineHeight: 21,
+                        }}
+                      >
+                        {c.journey.action}
+                      </Text>
+                    )}
                     {Boolean(c.note) && (
                       <Text
                         numberOfLines={2}
